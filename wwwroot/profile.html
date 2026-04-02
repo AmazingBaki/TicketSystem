@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Профиль</title>
+    <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+    <main class="container narrow">
+        <header class="app-topbar">
+            <div class="left">
+                <nav class="topnav" aria-label="Навигация">
+                    <a id="back-link-top" href="/" class="active">Назад</a>
+                    <a href="/" class="">Главная</a>
+                </nav>
+            </div>
+            <div class="right">
+                <span class="chip" id="role-chip">—</span>
+                <div class="profile-pill" title="Профиль">
+                    <span class="avatar"></span>
+                    <span class="name" id="topbar-profile">—</span>
+                </div>
+                <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+            </div>
+        </header>
+
+        <section class="card">
+            <h2>Данные профиля</h2>
+            <form id="profile-form">
+                <input name="name" placeholder="Имя" required />
+                <input name="surname" placeholder="Фамилия" required />
+                <input name="userName" placeholder="Username" required />
+                <input name="phoneNumber" placeholder="Телефон" required />
+                <button type="submit">Сохранить</button>
+            </form>
+            <pre id="profile-output" class="output"></pre>
+        </section>
+
+        <section class="card">
+            <h2>Изменить пароль</h2>
+            <form id="password-form">
+                <input name="currentPassword" type="password" placeholder="Текущий пароль" required />
+                <input name="newPassword" type="password" placeholder="Новый пароль" required />
+                <button type="submit">Сменить пароль</button>
+            </form>
+            <pre id="password-output" class="output"></pre>
+        </section>
+
+        <section class="card">
+            <h2>Изменить email</h2>
+            <p class="muted">После смены email потребуется войти заново (JWT-токен привязан к email).</p>
+            <form id="email-form">
+                <input name="newEmail" type="email" placeholder="Новый email" required />
+                <input name="currentPassword" type="password" placeholder="Текущий пароль" required />
+                <button type="submit">Сменить email</button>
+            </form>
+            <pre id="email-output" class="output"></pre>
+        </section>
+    </main>
+
+    <script type="module">
+        import { api, clearToken, requireAuth, setOutput } from "./common.js?v=3";
+
+        const me = await requireAuth();
+        if (!me) throw new Error("Unauthorized");
+
+        const backHref = me.roles.includes("Admin")
+            ? "/admin.html"
+            : (me.roles.includes("SupportAgent") ? "/support.html" : "/user.html");
+
+        document.getElementById("back-link-top").setAttribute("href", backHref);
+        document.getElementById("topbar-profile").textContent = `${me.name} ${me.surname}`;
+        document.getElementById("role-chip").textContent = me.roles.join(", ");
+
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            clearToken();
+            window.location.href = "/login.html";
+        });
+
+        async function loadProfile() {
+            const p = await api("/api/Profile");
+            const f = document.getElementById("profile-form");
+            f.name.value = p.name || "";
+            f.surname.value = p.surname || "";
+            f.userName.value = p.userName || "";
+            f.phoneNumber.value = p.phoneNumber || "";
+            setOutput("profile-output", "Загружено.");
+        }
+
+        document.getElementById("profile-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                await api("/api/Profile", {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        name: f.name.value,
+                        surname: f.surname.value,
+                        userName: f.userName.value,
+                        phoneNumber: f.phoneNumber.value
+                    })
+                });
+                setOutput("profile-output", "Сохранено.");
+            } catch (err) {
+                setOutput("profile-output", err.message);
+            }
+        });
+
+        document.getElementById("password-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                await api("/api/Profile/ChangePassword", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        currentPassword: f.currentPassword.value,
+                        newPassword: f.newPassword.value
+                    })
+                });
+                setOutput("password-output", "Пароль изменён.");
+                f.reset();
+            } catch (err) {
+                setOutput("password-output", err.message);
+            }
+        });
+
+        document.getElementById("email-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                await api("/api/Profile/ChangeEmail", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        newEmail: f.newEmail.value,
+                        currentPassword: f.currentPassword.value
+                    })
+                });
+                setOutput("email-output", "Email изменён. Нужно войти заново.");
+                clearToken();
+                window.location.href = "/login.html";
+            } catch (err) {
+                setOutput("email-output", err.message);
+            }
+        });
+
+        await loadProfile();
+    </script>
+</body>
+</html>
+

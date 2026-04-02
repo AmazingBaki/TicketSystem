@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Вход</title>
+    <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+    <main class="container narrow">
+        <h1>Вход</h1>
+        <section class="card">
+            <form id="login-form">
+                <input name="email" type="email" placeholder="Email" required />
+                <input name="password" type="password" placeholder="Пароль" required />
+                <button type="submit">Войти</button>
+            </form>
+            <div class="row">
+                <a class="link-btn ghost" href="/register.html">Регистрация</a>
+                <a class="link-btn ghost" href="/">На главную</a>
+            </div>
+            <pre id="login-output" class="output"></pre>
+        </section>
+    </main>
+
+    <script type="module">
+        import { api, setToken, getCurrentUser, setOutput } from "./common.js?v=3";
+
+        const me = await getCurrentUser();
+        if (me) {
+            window.location.href = me.roles.includes("Admin")
+                ? "/admin.html"
+                : (me.roles.includes("SupportAgent") ? "/support.html" : "/user.html");
+        }
+
+        document.getElementById("login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                const payload = { email: f.email.value, password: f.password.value };
+                const result = await api("/api/Auth/Login", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                    skipAuth: true
+                });
+                setToken(result.token);
+
+                const user = await getCurrentUser();
+                if (!user) {
+                    throw new Error("Не удалось загрузить профиль.");
+                }
+
+                window.location.href = user.roles.includes("Admin")
+                    ? "/admin.html"
+                    : (user.roles.includes("SupportAgent") ? "/support.html" : "/user.html");
+            } catch (err) {
+                setOutput("login-output", err.message);
+            }
+        });
+    </script>
+</body>
+</html>

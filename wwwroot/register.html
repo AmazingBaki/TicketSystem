@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+    <main class="container narrow">
+        <h1>Регистрация</h1>
+        <section class="card">
+            <p class="muted">Пароль — не короче 8 символов. Если этот email уже зарегистрирован, откройте <a href="/login.html">Вход</a>.</p>
+            <form id="register-form">
+                <input name="name" placeholder="Имя" required />
+                <input name="surname" placeholder="Фамилия" required />
+                <input name="email" type="email" placeholder="Email" required />
+                <input name="userName" placeholder="Username (уникальное)" required />
+                <input name="phoneNumber" placeholder="Телефон" required />
+                <input name="password" type="password" placeholder="Пароль (мин. 8 символов)" required minlength="8" autocomplete="new-password" />
+                <button type="submit">Зарегистрироваться</button>
+            </form>
+            <div class="row">
+                <a class="link-btn ghost" href="/login.html">Уже есть аккаунт</a>
+                <a class="link-btn ghost" href="/">На главную</a>
+            </div>
+            <pre id="register-output" class="output"></pre>
+        </section>
+    </main>
+
+    <script type="module">
+        import { api, setOutput } from "./common.js?v=3";
+
+        document.getElementById("register-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                const payload = {
+                    name: f.name.value,
+                    surname: f.surname.value,
+                    email: f.email.value,
+                    userName: f.userName.value,
+                    phoneNumber: f.phoneNumber.value,
+                    password: f.password.value
+                };
+                const userId = await api("/api/Auth/Register", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                    skipAuth: true
+                });
+                setOutput("register-output", { message: "Успешно зарегистрированы. Теперь войдите.", userId });
+                f.reset();
+            } catch (err) {
+                setOutput("register-output", err.message);
+            }
+        });
+    </script>
+</body>
+</html>

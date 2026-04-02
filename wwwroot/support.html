@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Служба поддержки</title>
+    <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="logo">TicketPro</div>
+            <div class="profile-mini"><span class="avatar"></span><span id="profile-output">support</span></div>
+            <nav class="menu">
+                <a href="/support.html" class="active">Рейтинг</a>
+                <a href="/login.html">Вход</a>
+            </nav>
+        </aside>
+
+        <main class="main-area">
+            <header class="app-topbar">
+                <div class="left">
+                    <button id="sidebar-toggle" class="icon-btn" type="button" aria-label="Меню">☰</button>
+                    <nav class="topnav" aria-label="Навигация">
+                        <a href="/support.html" class="active">Рейтинг</a>
+                        <a href="/" class="">Главная</a>
+                    </nav>
+                </div>
+                <div class="right">
+                    <span class="chip" id="role-chip">SupportAgent</span>
+                    <button id="load-ratings-btn" class="ghost-btn" type="button">Обновить</button>
+                    <div class="profile-pill" title="Профиль">
+                        <span class="avatar"></span>
+                        <span class="name" id="topbar-profile">support</span>
+                    </div>
+                    <a class="link-btn ghost" href="/profile.html">Профиль</a>
+                    <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+                </div>
+            </header>
+
+            <section class="card">
+                <h2>Мой рейтинг</h2>
+                <p class="muted">Метрики считаются автоматически по назначенным тикетам и ответам.</p>
+            </section>
+
+            <section class="table-card" style="margin-top:16px;">
+                <div class="table-head" style="grid-template-columns: 1fr 110px 110px 170px 170px;">
+                    <div>Сотрудник</div>
+                    <div>Назначено</div>
+                    <div>Закрыто</div>
+                    <div>Первый ответ</div>
+                    <div>Решение</div>
+                </div>
+                <div id="ratings-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { api, clearToken, requireAuth } from "./common.js?v=3";
+
+        const me = await requireAuth(["SupportAgent", "Admin"]);
+        if (!me) {
+            throw new Error("Forbidden");
+        }
+
+        document.getElementById("profile-output").textContent = `${me.name} ${me.surname}`;
+        document.getElementById("topbar-profile").textContent = `${me.name} ${me.surname}`;
+        document.getElementById("role-chip").textContent = me.roles.join(", ");
+
+        document.getElementById("sidebar-toggle").addEventListener("click", () => {
+            document.querySelector(".app-shell").classList.toggle("sidebar-collapsed");
+        });
+
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            clearToken();
+            window.location.href = "/login.html";
+        });
+
+        const ratingsList = document.getElementById("ratings-list");
+
+        function fmtMinutes(value) {
+            if (value === null || value === undefined) return "—";
+            if (value < 60) return `${Math.round(value)} мин`;
+            const h = value / 60;
+            return `${h.toFixed(h < 10 ? 1 : 0)} ч`;
+        }
+
+        function fmtHours(value) {
+            if (value === null || value === undefined) return "—";
+            if (value < 1) return `${Math.round(value * 60)} мин`;
+            return `${value.toFixed(value < 10 ? 1 : 0)} ч`;
+        }
+
+        function renderRatings(items) {
+            if (!items || items.length === 0) {
+                ratingsList.innerHTML = "<div class='table-row'><div class='muted'>Нет данных.</div></div>";
+                return;
+            }
+            ratingsList.innerHTML = items.map((r) => `
+                <div class="table-row" style="grid-template-columns: 1fr 110px 110px 170px 170px;">
+                    <div>
+                        <div class="ticket-title">${r.agentName}</div>
+                        <div class="meta">${r.agentEmail}</div>
+                    </div>
+                    <div>${r.assignedTotal}</div>
+                    <div>${r.closedTotal}</div>
+                    <div>${fmtMinutes(r.avgFirstResponseMinutes)}</div>
+                    <div>${fmtHours(r.avgResolutionHours)}</div>
+                </div>
+            `).join("");
+        }
+
+        async function loadRatings() {
+            try {
+                const data = await api("/api/SupportRatings");
+                renderRatings(data);
+            } catch (err) {
+                ratingsList.innerHTML = `<div class="table-row"><div class="muted">${err.message}</div></div>`;
+            }
+        }
+
+        document.getElementById("load-ratings-btn").addEventListener("click", loadRatings);
+        await loadRatings();
+    </script>
+</body>
+</html>
+

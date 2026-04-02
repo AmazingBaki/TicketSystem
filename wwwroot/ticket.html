@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Тикет</title>
+    <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+    <main class="container">
+        <header class="app-topbar">
+            <div class="left">
+                <nav class="topnav" aria-label="Навигация">
+                    <a id="back-link-top" href="/user.html" class="active">Назад</a>
+                    <a href="/" class="">Главная</a>
+                </nav>
+            </div>
+            <div class="right">
+                <span class="chip" id="role-chip">—</span>
+                <div class="profile-pill" title="Профиль">
+                    <span class="avatar"></span>
+                    <span class="name" id="topbar-profile">—</span>
+                </div>
+                <a class="link-btn ghost" href="/profile.html">Профиль</a>
+                <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+            </div>
+        </header>
+
+        <section class="card">
+            <div class="row wrap"></div>
+            <div id="ticket-header"></div>
+        </section>
+
+        <section id="edit-ticket-card" class="card" style="display:none;">
+            <h2>Обновить тикет</h2>
+            <form id="edit-ticket-form">
+                <input name="title" placeholder="Заголовок" required />
+                <textarea name="description" placeholder="Описание" required></textarea>
+                <label>
+                    Приоритет
+                    <select name="priority" required>
+                        <option value="0">Low</option>
+                        <option value="1">Medium</option>
+                        <option value="2">High</option>
+                    </select>
+                </label>
+                <label>
+                    Статус
+                    <select name="status" required>
+                        <option value="0">Open</option>
+                        <option value="1">In Progress</option>
+                        <option value="2">Closed</option>
+                    </select>
+                </label>
+                <input name="assignedToId" placeholder="AssignedToId (GUID, необязательно)" />
+                <button type="submit">Сохранить изменения</button>
+            </form>
+            <p id="edit-output" class="muted"></p>
+        </section>
+
+        <section class="card">
+            <h2>Комментарии</h2>
+            <div id="comments-list" class="comment-list"></div>
+        </section>
+
+        <section class="card">
+            <h2>Ответить</h2>
+            <form id="comment-form">
+                <textarea name="text" placeholder="Введите ваш ответ..." required></textarea>
+                <input name="files" type="file" multiple />
+                <button type="submit">Отправить комментарий</button>
+            </form>
+            <p id="comment-output" class="muted"></p>
+        </section>
+    </main>
+
+    <script type="module">
+        import { api, clearToken, requireAuth, formatDate, priorityText, statusText } from "./common.js?v=3";
+
+        const me = await requireAuth();
+        if (!me) {
+            throw new Error("Unauthorized");
+        }
+
+        const ticketId = new URLSearchParams(window.location.search).get("id");
+        if (!ticketId) {
+            document.getElementById("ticket-header").innerHTML = "<p class='muted'>Не передан id тикета.</p>";
+            throw new Error("Missing ticket id");
+        }
+
+        const isAdminOrSupport = me.roles.includes("Admin") || me.roles.includes("SupportAgent");
+        const backHref = me.roles.includes("Admin") ? "/admin.html" : (me.roles.includes("SupportAgent") ? "/support.html" : "/user.html");
+        document.getElementById("back-link-top").setAttribute("href", backHref);
+        document.getElementById("edit-ticket-card").style.display = isAdminOrSupport ? "block" : "none";
+
+        document.getElementById("topbar-profile").textContent = `${me.name} ${me.surname}`;
+        document.getElementById("role-chip").textContent = me.roles.join(", ");
+
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            clearToken();
+            window.location.href = "/login.html";
+        });
+
+        async function loadTicket() {
+            const ticket = await api(`/api/Tickets/TicketDetails/${encodeURIComponent(ticketId)}`);
+
+            const ticketAttachments = (ticket.attachments || []).map((a) => `
+                <li><a class="link-btn ghost" href="/api/Attachments/Download/${a.id}">${a.originalFileName}</a> <span class="muted">(${Math.round((a.size || 0) / 1024)} KB)</span></li>
+            `).join("");
+
+            document.getElementById("ticket-header").innerHTML = `
+                <h2>${ticket.title}</h2>
+                <p>${ticket.description}</p>
+                <p class="meta">
+                    <span class="badge status">${statusText(ticket.status)}</span>
+                    <span class="badge priority">${priorityText(ticket.priority)}</span>
+                </p>
+                <p class="meta">Автор: ${ticket.userEmail}</p>
+                <p class="meta">Создан: ${formatDate(ticket.createdAt)}</p>
+                <div class="meta">
+                    <strong>Вложения:</strong>
+                    ${ticketAttachments ? `<ul>${ticketAttachments}</ul>` : `<span class="muted">нет</span>`}
+                </div>
+            `;
+
+            if (isAdminOrSupport) {
+                const form = document.getElementById("edit-ticket-form");
+                form.title.value = ticket.title;
+                form.description.value = ticket.description;
+                form.priority.value = String(ticket.priority);
+                form.status.value = String(ticket.status);
+                form.assignedToId.value = ticket.assignedToId || "";
+            }
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return "";
+            const div = document.createElement("div");
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        async function loadComments() {
+            const comments = await api(`/api/Tickets/Comments/GetCommentsToTicket/${encodeURIComponent(ticketId)}`);
+            const list = document.getElementById("comments-list");
+            if (!comments || comments.length === 0) {
+                list.innerHTML = "<p class='muted'>Комментариев пока нет.</p>";
+                return;
+            }
+            list.innerHTML = comments.map((comment) => `
+                <article class="comment-item" data-comment-id="${comment.id}">
+                    <p class="comment-body">${escapeHtml(comment.text)}</p>
+                    ${(comment.attachments && comment.attachments.length > 0) ? `
+                        <div class="meta">
+                            <strong>Вложения:</strong>
+                            <ul>
+                                ${comment.attachments.map((a) => `
+                                    <li><a class="link-btn ghost" href="/api/Attachments/Download/${a.id}">${a.originalFileName}</a> <span class="muted">(${Math.round((a.size || 0) / 1024)} KB)</span></li>
+                                `).join("")}
+                            </ul>
+                        </div>
+                    ` : ""}
+                    <p class="meta">${comment.userEmail} | ${formatDate(comment.createdAt)}</p>
+                    ${isAdminOrSupport ? `
+                        <div class="row wrap" style="margin-top:8px;">
+                            <button type="button" class="link-btn ghost js-comment-edit" data-id="${comment.id}">Изменить текст</button>
+                        </div>
+                        <div class="comment-edit-panel" data-edit-panel="${comment.id}" style="display:none;margin-top:8px;">
+                            <textarea class="comment-edit-text" rows="4" style="width:100%;">${escapeHtml(comment.text)}</textarea>
+                            <div class="row wrap" style="margin-top:8px;">
+                                <button type="button" class="ghost-btn js-comment-save" data-id="${comment.id}">Сохранить</button>
+                                <button type="button" class="ghost-btn js-comment-cancel" data-id="${comment.id}">Отмена</button>
+                            </div>
+                            <p class="muted js-comment-edit-msg" data-edit-msg="${comment.id}"></p>
+                        </div>
+                    ` : ""}
+                </article>
+            `).join("");
+
+            if (isAdminOrSupport) {
+                list.querySelectorAll(".js-comment-edit").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        const id = btn.dataset.id;
+                        const panel = list.querySelector('[data-edit-panel="' + id + '"]');
+                        if (panel) panel.style.display = "block";
+                    });
+                });
+                list.querySelectorAll(".js-comment-cancel").forEach((btn) => {
+                    btn.addEventListener("click", async () => {
+                        const id = btn.dataset.id;
+                        const panel = list.querySelector('[data-edit-panel="' + id + '"]');
+                        if (!panel) return;
+                        const t = await api("/api/Tickets/Comments/GetCommentsToTicket/" + encodeURIComponent(ticketId));
+                        const c = (t || []).find((x) => x.id === id);
+                        const ta = panel.querySelector(".comment-edit-text");
+                        if (c && ta) ta.value = c.text;
+                        panel.style.display = "none";
+                    });
+                });
+                list.querySelectorAll(".js-comment-save").forEach((btn) => {
+                    btn.addEventListener("click", async () => {
+                        const id = btn.dataset.id;
+                        const panel = list.querySelector('[data-edit-panel="' + id + '"]');
+                        const msg = list.querySelector('[data-edit-msg="' + id + '"]');
+                        const ta = panel && panel.querySelector(".comment-edit-text");
+                        if (!ta) return;
+                        try {
+                            await api("/api/Comments/UpdateComment/" + encodeURIComponent(id), {
+                                method: "PUT",
+                                body: JSON.stringify({ text: ta.value })
+                            });
+                            if (msg) msg.textContent = "Сохранено.";
+                            await loadComments();
+                        } catch (err) {
+                            if (msg) msg.textContent = err.message;
+                        }
+                    });
+                });
+            }
+        }
+
+        document.getElementById("comment-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const output = document.getElementById("comment-output");
+            try {
+                const commentId = await api("/api/Tickets/Comments/AddCommentToTicket", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        text: form.text.value,
+                        userId: me.id,
+                        ticketId
+                    })
+                });
+
+                const files = Array.from(form.files.files || []);
+                for (const file of files) {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    await api(`/api/Attachments/Comments/UploadAttachment/${encodeURIComponent(commentId)}`, {
+                        method: "POST",
+                        body: fd
+                    });
+                }
+
+                output.textContent = "Комментарий отправлен.";
+                form.reset();
+                await loadComments();
+            } catch (err) {
+                output.textContent = err.message;
+            }
+        });
+
+        if (isAdminOrSupport) {
+            document.getElementById("edit-ticket-form").addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const output = document.getElementById("edit-output");
+                try {
+                    await api(`/api/Tickets/UpdateTicket/${encodeURIComponent(ticketId)}`, {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            title: form.title.value,
+                            description: form.description.value,
+                            priority: Number(form.priority.value),
+                            status: Number(form.status.value),
+                            assignedToId: form.assignedToId.value || null
+                        })
+                    });
+                    output.textContent = "Тикет обновлен.";
+                    await loadTicket();
+                } catch (err) {
+                    output.textContent = err.message;
+                }
+            });
+        }
+
+        try {
+            await loadTicket();
+            await loadComments();
+        } catch (err) {
+            document.getElementById("ticket-header").innerHTML = `<p class="muted">${err.message}</p>`;
+        }
+    </script>
+</body>
+</html>

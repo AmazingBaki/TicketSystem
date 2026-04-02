@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Кабинет пользователя</title>
+    <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="logo">TicketPro</div>
+            <div class="profile-mini"><span class="avatar"></span><span id="profile-output">user</span></div>
+            <nav class="menu">
+                <a href="/user.html" class="active">Мои тикеты</a>
+                <a href="/login.html">Вход</a>
+            </nav>
+        </aside>
+
+        <main class="main-area">
+            <header class="app-topbar">
+                <div class="left">
+                    <button id="sidebar-toggle" class="icon-btn" type="button" aria-label="Меню">☰</button>
+                    <nav class="topnav" aria-label="Навигация">
+                        <a href="/user.html" class="active">Мои тикеты</a>
+                        <a href="/" class="">Главная</a>
+                    </nav>
+                </div>
+                <div class="right">
+                    <span class="chip" id="role-chip">Customer</span>
+                    <button id="refresh-btn" class="ghost-btn" type="button">Обновить</button>
+                    <button id="create-open-btn" class="ghost-btn" type="button">Создать тикет</button>
+                    <div class="profile-pill" title="Профиль">
+                        <span class="avatar"></span>
+                        <span class="name" id="topbar-profile">user</span>
+                    </div>
+                    <a class="link-btn ghost" href="/profile.html">Профиль</a>
+                    <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+                </div>
+            </header>
+
+            <section class="stats-grid">
+                <article class="stat-card"><div class="label">Всего моих</div><div id="stat-total" class="value">0</div></article>
+                <article class="stat-card"><div class="label">Открытые</div><div id="stat-open" class="value">0</div></article>
+                <article class="stat-card"><div class="label">В работе</div><div id="stat-progress" class="value">0</div></article>
+                <article class="stat-card"><div class="label">Закрытые</div><div id="stat-closed" class="value">0</div></article>
+            </section>
+
+            <section id="create-ticket-card" class="card" style="display:none;">
+                <h2>Создать тикет</h2>
+                <form id="create-ticket-form">
+                    <input name="title" placeholder="Заголовок" required />
+                    <textarea name="description" placeholder="Описание" required></textarea>
+                    <input name="files" type="file" multiple />
+                    <label>
+                        Приоритет
+                        <select name="priority" required>
+                            <option value="0">Low</option>
+                            <option value="1">Medium</option>
+                            <option value="2">High</option>
+                        </select>
+                    </label>
+                    <button type="submit">Создать</button>
+                </form>
+                <p id="create-ticket-output" class="muted"></p>
+            </section>
+
+            <section class="table-card">
+                <div class="toolbar-inline">
+                    <h3>Мои тикеты</h3>
+                    <input id="search-input" placeholder="Поиск..." />
+                </div>
+                <div class="table-head">
+                    <div>Тикет</div>
+                    <div>Статус</div>
+                    <div>Приоритет</div>
+                    <div>Действие</div>
+                </div>
+                <div id="tickets-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { api, clearToken, requireAuth, formatDate, priorityText, statusText } from "./common.js?v=3";
+
+        const me = await requireAuth();
+        if (!me) {
+            throw new Error("Unauthorized");
+        }
+
+        const profileOutput = document.getElementById("profile-output");
+        const createTicketOutput = document.getElementById("create-ticket-output");
+        const ticketsList = document.getElementById("tickets-list");
+        const searchInput = document.getElementById("search-input");
+        const createCard = document.getElementById("create-ticket-card");
+        let allTickets = [];
+
+        profileOutput.textContent = `${me.name} ${me.surname}`;
+        document.getElementById("topbar-profile").textContent = `${me.name} ${me.surname}`;
+        document.getElementById("role-chip").textContent = me.roles.join(", ");
+
+        document.getElementById("sidebar-toggle").addEventListener("click", () => {
+            document.querySelector(".app-shell").classList.toggle("sidebar-collapsed");
+        });
+
+        function renderTickets(items) {
+            if (!items || items.length === 0) {
+                ticketsList.innerHTML = "<div class='table-row'><div class='muted'>Тикеты пока не созданы.</div></div>";
+                return;
+            }
+
+            ticketsList.innerHTML = items.map((ticket) => `
+                <div class="table-row">
+                    <div>
+                        <div class="ticket-title">${ticket.title}</div>
+                        <div class="meta">${formatDate(ticket.createdAt)}</div>
+                    </div>
+                    <div><span class="badge status">${statusText(ticket.status)}</span></div>
+                    <div><span class="badge priority">${priorityText(ticket.priority)}</span></div>
+                    <div><a class="link-btn" href="/ticket.html?id=${ticket.id}">Открыть</a></div>
+                </div>
+            `).join("");
+        }
+
+        function renderStats(items) {
+            document.getElementById("stat-total").textContent = String(items.length);
+            document.getElementById("stat-open").textContent = String(items.filter((t) => t.status === 0).length);
+            document.getElementById("stat-progress").textContent = String(items.filter((t) => t.status === 1).length);
+            document.getElementById("stat-closed").textContent = String(items.filter((t) => t.status === 2).length);
+        }
+
+        function applyFilter() {
+            const term = searchInput.value.trim().toLowerCase();
+            if (!term) {
+                renderTickets(allTickets);
+                return;
+            }
+            renderTickets(allTickets.filter((t) => t.title.toLowerCase().includes(term)));
+        }
+
+        async function loadTickets() {
+            try {
+                const data = await api(`/api/Tickets/GetTickets?take=50&skip=0&sortColumn=CreatedAt&order=desc&userId=${me.id}`);
+                allTickets = data.tickets || [];
+                renderStats(allTickets);
+                applyFilter();
+            } catch (err) {
+                ticketsList.innerHTML = `<div class="table-row"><div class="muted">${err.message}</div></div>`;
+            }
+        }
+
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            clearToken();
+            window.location.href = "/login.html";
+        });
+
+        document.getElementById("refresh-btn").addEventListener("click", loadTickets);
+        document.getElementById("create-open-btn").addEventListener("click", () => {
+            createCard.style.display = createCard.style.display === "none" ? "block" : "none";
+        });
+        searchInput.addEventListener("input", applyFilter);
+
+        document.getElementById("create-ticket-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                const payload = {
+                    title: f.title.value,
+                    description: f.description.value,
+                    priority: Number(f.priority.value),
+                    userId: me.id,
+                    assignedToId: null
+                };
+                const ticketId = await api("/api/Tickets/CreateTicket", {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+
+                const files = Array.from(f.files.files || []);
+                for (const file of files) {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    await api(`/api/Attachments/Tickets/UploadAttachment/${encodeURIComponent(ticketId)}`, {
+                        method: "POST",
+                        body: fd
+                    });
+                }
+
+                createTicketOutput.textContent = `Тикет создан: ${ticketId}`;
+                f.reset();
+                await loadTickets();
+            } catch (err) {
+                createTicketOutput.textContent = err.message;
+            }
+        });
+        await loadTickets();
+    </script>
+</body>
+</html>
