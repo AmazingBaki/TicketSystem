@@ -3,26 +3,30 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Тикет</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <title data-i18n="meta.ticketTitle">Тикет</title>
+    <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
     <main class="container">
         <header class="app-topbar">
             <div class="left">
-                <nav class="topnav" aria-label="Навигация">
-                    <a id="back-link-top" href="/user.html" class="active">Назад</a>
-                    <a href="/" class="">Главная</a>
+                <nav class="topnav" data-i18n-aria-label="nav.mainNav" aria-label="Навигация">
+                    <a id="back-link-top" href="/user.html" class="active" data-i18n="nav.back">Назад</a>
+                    <a href="/" data-i18n="nav.home">Главная</a>
                 </nav>
             </div>
             <div class="right">
+                <div class="lang-switch" role="group">
+                    <button type="button" class="ghost-btn lang-btn" data-set-lang="ru" data-i18n="lang.ru">Русский</button>
+                    <button type="button" class="ghost-btn lang-btn" data-set-lang="ky" data-i18n="lang.ky">Кыргызча</button>
+                </div>
                 <span class="chip" id="role-chip">—</span>
-                <div class="profile-pill" title="Профиль">
+                <div class="profile-pill" data-i18n-title="top.profileTitle" title="Профиль">
                     <span class="avatar"></span>
                     <span class="name" id="topbar-profile">—</span>
                 </div>
-                <a class="link-btn ghost" href="/profile.html">Профиль</a>
-                <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+                <a class="link-btn ghost" href="/profile.html" data-i18n="top.profileLink">Профиль</a>
+                <button id="logout-btn" class="ghost-btn" type="button" data-i18n="top.logout">Выйти</button>
             </div>
         </header>
 
@@ -32,50 +36,54 @@
         </section>
 
         <section id="edit-ticket-card" class="card" style="display:none;">
-            <h2>Обновить тикет</h2>
+            <h2 data-i18n="ticket.editTitle">Обновить тикет</h2>
             <form id="edit-ticket-form">
-                <input name="title" placeholder="Заголовок" required />
-                <textarea name="description" placeholder="Описание" required></textarea>
+                <input name="title" data-i18n-placeholder="user.titlePh" placeholder="Заголовок" required />
+                <textarea name="description" data-i18n-placeholder="user.descPh" placeholder="Описание" required></textarea>
                 <label>
-                    Приоритет
+                    <span data-i18n="user.priorityLabel">Приоритет</span>
                     <select name="priority" required>
-                        <option value="0">Low</option>
-                        <option value="1">Medium</option>
-                        <option value="2">High</option>
+                        <option value="0" data-i18n="ticket.priority0">Low</option>
+                        <option value="1" data-i18n="ticket.priority1">Medium</option>
+                        <option value="2" data-i18n="ticket.priority2">High</option>
                     </select>
                 </label>
                 <label>
-                    Статус
+                    <span data-i18n="table.colStatus">Статус</span>
                     <select name="status" required>
-                        <option value="0">Open</option>
-                        <option value="1">In Progress</option>
-                        <option value="2">Closed</option>
+                        <option value="0" data-i18n="ticket.status0">Open</option>
+                        <option value="1" data-i18n="ticket.status1">In Progress</option>
+                        <option value="2" data-i18n="ticket.status2">Closed</option>
                     </select>
                 </label>
-                <input name="assignedToId" placeholder="AssignedToId (GUID, необязательно)" />
-                <button type="submit">Сохранить изменения</button>
+                <input name="assignedToId" data-i18n-placeholder="ticket.assignedPh" placeholder="AssignedToId (GUID, необязательно)" />
+                <button type="submit" data-i18n="ticket.saveChanges">Сохранить изменения</button>
             </form>
             <p id="edit-output" class="muted"></p>
         </section>
 
         <section class="card">
-            <h2>Комментарии</h2>
+            <h2 data-i18n="ticket.comments">Комментарии</h2>
             <div id="comments-list" class="comment-list"></div>
         </section>
 
         <section class="card">
-            <h2>Ответить</h2>
+            <h2 data-i18n="ticket.reply">Ответить</h2>
             <form id="comment-form">
-                <textarea name="text" placeholder="Введите ваш ответ..." required></textarea>
+                <textarea name="text" data-i18n-placeholder="ticket.replyPh" placeholder="Введите ваш ответ..." required></textarea>
                 <input name="files" type="file" multiple />
-                <button type="submit">Отправить комментарий</button>
+                <button type="submit" data-i18n="ticket.sendComment">Отправить комментарий</button>
             </form>
             <p id="comment-output" class="muted"></p>
         </section>
     </main>
 
     <script type="module">
-        import { api, clearToken, requireAuth, formatDate, priorityText, statusText } from "./common.js?v=3";
+        import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
+        import { api, clearToken, requireAuth, formatDate, priorityText, statusText } from "./common.js?v=4";
+
+        applyDomI18n();
+        bindLangSwitch();
 
         const me = await requireAuth();
         if (!me) {
@@ -84,7 +92,7 @@
 
         const ticketId = new URLSearchParams(window.location.search).get("id");
         if (!ticketId) {
-            document.getElementById("ticket-header").innerHTML = "<p class='muted'>Не передан id тикета.</p>";
+            document.getElementById("ticket-header").innerHTML = `<p class='muted'>${t("ticket.missingId")}</p>`;
             throw new Error("Missing ticket id");
         }
 
@@ -108,6 +116,11 @@
                 <li><a class="link-btn ghost" href="/api/Attachments/Download/${a.id}">${a.originalFileName}</a> <span class="muted">(${Math.round((a.size || 0) / 1024)} KB)</span></li>
             `).join("");
 
+            const attLabel = t("ticket.attachments");
+            const noAtt = t("ticket.noAttachments");
+            const authorLabel = t("ticket.author");
+            const createdLabel = t("ticket.created");
+
             document.getElementById("ticket-header").innerHTML = `
                 <h2>${ticket.title}</h2>
                 <p>${ticket.description}</p>
@@ -115,11 +128,11 @@
                     <span class="badge status">${statusText(ticket.status)}</span>
                     <span class="badge priority">${priorityText(ticket.priority)}</span>
                 </p>
-                <p class="meta">Автор: ${ticket.userEmail}</p>
-                <p class="meta">Создан: ${formatDate(ticket.createdAt)}</p>
+                <p class="meta">${authorLabel} ${ticket.userEmail}</p>
+                <p class="meta">${createdLabel} ${formatDate(ticket.createdAt)}</p>
                 <div class="meta">
-                    <strong>Вложения:</strong>
-                    ${ticketAttachments ? `<ul>${ticketAttachments}</ul>` : `<span class="muted">нет</span>`}
+                    <strong>${attLabel}</strong>
+                    ${ticketAttachments ? `<ul>${ticketAttachments}</ul>` : `<span class="muted">${noAtt}</span>`}
                 </div>
             `;
 
@@ -143,8 +156,13 @@
         async function loadComments() {
             const comments = await api(`/api/Tickets/Comments/GetCommentsToTicket/${encodeURIComponent(ticketId)}`);
             const list = document.getElementById("comments-list");
+            const attLabel = t("ticket.attachments");
+            const editBtn = t("ticket.editText");
+            const saveBtn = t("ticket.save");
+            const cancelBtn = t("ticket.cancel");
+
             if (!comments || comments.length === 0) {
-                list.innerHTML = "<p class='muted'>Комментариев пока нет.</p>";
+                list.innerHTML = `<p class='muted'>${t("ticket.noComments")}</p>`;
                 return;
             }
             list.innerHTML = comments.map((comment) => `
@@ -152,7 +170,7 @@
                     <p class="comment-body">${escapeHtml(comment.text)}</p>
                     ${(comment.attachments && comment.attachments.length > 0) ? `
                         <div class="meta">
-                            <strong>Вложения:</strong>
+                            <strong>${attLabel}</strong>
                             <ul>
                                 ${comment.attachments.map((a) => `
                                     <li><a class="link-btn ghost" href="/api/Attachments/Download/${a.id}">${a.originalFileName}</a> <span class="muted">(${Math.round((a.size || 0) / 1024)} KB)</span></li>
@@ -163,13 +181,13 @@
                     <p class="meta">${comment.userEmail} | ${formatDate(comment.createdAt)}</p>
                     ${isAdminOrSupport ? `
                         <div class="row wrap" style="margin-top:8px;">
-                            <button type="button" class="link-btn ghost js-comment-edit" data-id="${comment.id}">Изменить текст</button>
+                            <button type="button" class="link-btn ghost js-comment-edit" data-id="${comment.id}">${editBtn}</button>
                         </div>
                         <div class="comment-edit-panel" data-edit-panel="${comment.id}" style="display:none;margin-top:8px;">
                             <textarea class="comment-edit-text" rows="4" style="width:100%;">${escapeHtml(comment.text)}</textarea>
                             <div class="row wrap" style="margin-top:8px;">
-                                <button type="button" class="ghost-btn js-comment-save" data-id="${comment.id}">Сохранить</button>
-                                <button type="button" class="ghost-btn js-comment-cancel" data-id="${comment.id}">Отмена</button>
+                                <button type="button" class="ghost-btn js-comment-save" data-id="${comment.id}">${saveBtn}</button>
+                                <button type="button" class="ghost-btn js-comment-cancel" data-id="${comment.id}">${cancelBtn}</button>
                             </div>
                             <p class="muted js-comment-edit-msg" data-edit-msg="${comment.id}"></p>
                         </div>
@@ -190,8 +208,8 @@
                         const id = btn.dataset.id;
                         const panel = list.querySelector('[data-edit-panel="' + id + '"]');
                         if (!panel) return;
-                        const t = await api("/api/Tickets/Comments/GetCommentsToTicket/" + encodeURIComponent(ticketId));
-                        const c = (t || []).find((x) => x.id === id);
+                        const fresh = await api("/api/Tickets/Comments/GetCommentsToTicket/" + encodeURIComponent(ticketId));
+                        const c = (fresh || []).find((x) => x.id === id);
                         const ta = panel.querySelector(".comment-edit-text");
                         if (c && ta) ta.value = c.text;
                         panel.style.display = "none";
@@ -209,7 +227,7 @@
                                 method: "PUT",
                                 body: JSON.stringify({ text: ta.value })
                             });
-                            if (msg) msg.textContent = "Сохранено.";
+                            if (msg) msg.textContent = t("ticket.saved");
                             await loadComments();
                         } catch (err) {
                             if (msg) msg.textContent = err.message;
@@ -243,7 +261,7 @@
                     });
                 }
 
-                output.textContent = "Комментарий отправлен.";
+                output.textContent = t("ticket.commentSent");
                 form.reset();
                 await loadComments();
             } catch (err) {
@@ -267,7 +285,7 @@
                             assignedToId: form.assignedToId.value || null
                         })
                     });
-                    output.textContent = "Тикет обновлен.";
+                    output.textContent = t("ticket.updated");
                     await loadTicket();
                 } catch (err) {
                     output.textContent = err.message;

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Служба поддержки</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <title data-i18n="meta.supportTitle">Служба поддержки</title>
+    <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
     <div class="app-shell">
@@ -12,44 +12,48 @@
             <div class="logo">TicketPro</div>
             <div class="profile-mini"><span class="avatar"></span><span id="profile-output">support</span></div>
             <nav class="menu">
-                <a href="/support.html" class="active">Рейтинг</a>
-                <a href="/login.html">Вход</a>
+                <a href="/support.html" class="active" data-i18n="nav.ratings">Рейтинг</a>
+                <a href="/login.html" data-i18n="nav.login">Вход</a>
             </nav>
         </aside>
 
         <main class="main-area">
             <header class="app-topbar">
                 <div class="left">
-                    <button id="sidebar-toggle" class="icon-btn" type="button" aria-label="Меню">☰</button>
-                    <nav class="topnav" aria-label="Навигация">
-                        <a href="/support.html" class="active">Рейтинг</a>
-                        <a href="/" class="">Главная</a>
+                    <button id="sidebar-toggle" class="icon-btn" type="button" data-i18n-aria-label="top.menu" aria-label="Меню">☰</button>
+                    <nav class="topnav" data-i18n-aria-label="nav.mainNav" aria-label="Навигация">
+                        <a href="/support.html" class="active" data-i18n="nav.ratings">Рейтинг</a>
+                        <a href="/" data-i18n="nav.home">Главная</a>
                     </nav>
                 </div>
                 <div class="right">
+                    <div class="lang-switch" role="group">
+                        <button type="button" class="ghost-btn lang-btn" data-set-lang="ru" data-i18n="lang.ru">Русский</button>
+                        <button type="button" class="ghost-btn lang-btn" data-set-lang="ky" data-i18n="lang.ky">Кыргызча</button>
+                    </div>
                     <span class="chip" id="role-chip">SupportAgent</span>
-                    <button id="load-ratings-btn" class="ghost-btn" type="button">Обновить</button>
-                    <div class="profile-pill" title="Профиль">
+                    <button id="load-ratings-btn" class="ghost-btn" type="button" data-i18n="top.refresh">Обновить</button>
+                    <div class="profile-pill" data-i18n-title="top.profileTitle" title="Профиль">
                         <span class="avatar"></span>
                         <span class="name" id="topbar-profile">support</span>
                     </div>
-                    <a class="link-btn ghost" href="/profile.html">Профиль</a>
-                    <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+                    <a class="link-btn ghost" href="/profile.html" data-i18n="top.profileLink">Профиль</a>
+                    <button id="logout-btn" class="ghost-btn" type="button" data-i18n="top.logout">Выйти</button>
                 </div>
             </header>
 
             <section class="card">
-                <h2>Мой рейтинг</h2>
-                <p class="muted">Метрики считаются автоматически по назначенным тикетам и ответам.</p>
+                <h2 data-i18n="support.myRating">Мой рейтинг</h2>
+                <p class="muted" data-i18n="support.metricsHint">Метрики считаются автоматически по назначенным тикетам и ответам.</p>
             </section>
 
             <section class="table-card" style="margin-top:16px;">
                 <div class="table-head" style="grid-template-columns: 1fr 110px 110px 170px 170px;">
-                    <div>Сотрудник</div>
-                    <div>Назначено</div>
-                    <div>Закрыто</div>
-                    <div>Первый ответ</div>
-                    <div>Решение</div>
+                    <div data-i18n="table.colEmployee">Сотрудник</div>
+                    <div data-i18n="table.colAssigned">Назначено</div>
+                    <div data-i18n="table.colClosed">Закрыто</div>
+                    <div data-i18n="table.colFirstResponse">Первый ответ</div>
+                    <div data-i18n="table.colResolution">Решение</div>
                 </div>
                 <div id="ratings-list"></div>
             </section>
@@ -57,7 +61,11 @@
     </div>
 
     <script type="module">
-        import { api, clearToken, requireAuth } from "./common.js?v=3";
+        import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
+        import { api, clearToken, requireAuth } from "./common.js?v=4";
+
+        applyDomI18n();
+        bindLangSwitch();
 
         const me = await requireAuth(["SupportAgent", "Admin"]);
         if (!me) {
@@ -81,20 +89,24 @@
 
         function fmtMinutes(value) {
             if (value === null || value === undefined) return "—";
-            if (value < 60) return `${Math.round(value)} мин`;
-            const h = value / 60;
-            return `${h.toFixed(h < 10 ? 1 : 0)} ч`;
+            const m = t("time.minShort");
+            const h = t("time.hourShort");
+            if (value < 60) return `${Math.round(value)} ${m}`;
+            const hours = value / 60;
+            return `${hours.toFixed(hours < 10 ? 1 : 0)} ${h}`;
         }
 
         function fmtHours(value) {
             if (value === null || value === undefined) return "—";
-            if (value < 1) return `${Math.round(value * 60)} мин`;
-            return `${value.toFixed(value < 10 ? 1 : 0)} ч`;
+            const m = t("time.minShort");
+            const h = t("time.hourShort");
+            if (value < 1) return `${Math.round(value * 60)} ${m}`;
+            return `${value.toFixed(value < 10 ? 1 : 0)} ${h}`;
         }
 
         function renderRatings(items) {
             if (!items || items.length === 0) {
-                ratingsList.innerHTML = "<div class='table-row'><div class='muted'>Нет данных.</div></div>";
+                ratingsList.innerHTML = `<div class='table-row'><div class='muted'>${t("table.noData")}</div></div>`;
                 return;
             }
             ratingsList.innerHTML = items.map((r) => `
@@ -125,4 +137,3 @@
     </script>
 </body>
 </html>
-

@@ -3,28 +3,38 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Вход</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <title data-i18n="meta.loginTitle">Вход</title>
+    <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
     <main class="container narrow">
-        <h1>Вход</h1>
+        <div class="page-head">
+            <h1 data-i18n="meta.loginTitle">Вход</h1>
+            <div class="lang-switch" role="group">
+                <button type="button" class="ghost-btn lang-btn" data-set-lang="ru" data-i18n="lang.ru">Русский</button>
+                <button type="button" class="ghost-btn lang-btn" data-set-lang="ky" data-i18n="lang.ky">Кыргызча</button>
+            </div>
+        </div>
         <section class="card">
             <form id="login-form">
-                <input name="email" type="email" placeholder="Email" required />
-                <input name="password" type="password" placeholder="Пароль" required />
-                <button type="submit">Войти</button>
+                <input name="email" type="email" data-i18n-placeholder="login.emailPh" placeholder="Email" required />
+                <input name="password" type="password" data-i18n-placeholder="login.passwordPh" placeholder="Пароль" required />
+                <button type="submit" data-i18n="login.submit">Войти</button>
             </form>
             <div class="row">
-                <a class="link-btn ghost" href="/register.html">Регистрация</a>
-                <a class="link-btn ghost" href="/">На главную</a>
+                <a class="link-btn ghost" href="/register.html" data-i18n="login.hasAccount">Регистрация</a>
+                <a class="link-btn ghost" href="/" data-i18n="login.toHome">На главную</a>
             </div>
             <pre id="login-output" class="output"></pre>
         </section>
     </main>
 
     <script type="module">
-        import { api, setToken, getCurrentUser, setOutput } from "./common.js?v=3";
+        import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
+        import { api, setToken, getCurrentUser, setOutput } from "./common.js?v=4";
+
+        applyDomI18n();
+        bindLangSwitch();
 
         const me = await getCurrentUser();
         if (me) {
@@ -47,7 +57,7 @@
 
                 const user = await getCurrentUser();
                 if (!user) {
-                    throw new Error("Не удалось загрузить профиль.");
+                    throw new Error(t("login.profileLoadError"));
                 }
 
                 window.location.href = user.roles.includes("Admin")

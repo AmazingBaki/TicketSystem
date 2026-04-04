@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Панель администратора</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <title data-i18n="meta.adminTitle">Панель администратора</title>
+    <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
     <div class="app-shell">
@@ -12,89 +12,93 @@
             <div class="logo">TicketPro</div>
             <div class="profile-mini"><span class="avatar"></span><span id="profile-output">admin</span></div>
             <nav class="menu">
-                <a href="/admin.html" class="active">Консоль</a>
-                <a href="/support.html">Рейтинг</a>
-                <a href="/user.html">Пользовательский вид</a>
-                <a href="/login.html">Вход</a>
+                <a href="/admin.html" class="active" data-i18n="nav.console">Консоль</a>
+                <a href="/support.html" data-i18n="nav.ratings">Рейтинг</a>
+                <a href="/user.html" data-i18n="nav.userView">Пользовательский вид</a>
+                <a href="/login.html" data-i18n="nav.login">Вход</a>
             </nav>
         </aside>
         <main class="main-area">
             <header class="app-topbar">
                 <div class="left">
-                    <button id="sidebar-toggle" class="icon-btn" type="button" aria-label="Меню">☰</button>
-                    <nav class="topnav" aria-label="Навигация">
-                        <a href="/admin.html" class="active">Консоль</a>
-                        <a href="/support.html">Рейтинг</a>
-                        <a href="/user.html">Пользователь</a>
+                    <button id="sidebar-toggle" class="icon-btn" type="button" data-i18n-aria-label="top.menu" aria-label="Меню">☰</button>
+                    <nav class="topnav" data-i18n-aria-label="nav.mainNav" aria-label="Навигация">
+                        <a href="/admin.html" class="active" data-i18n="nav.console">Консоль</a>
+                        <a href="/support.html" data-i18n="nav.ratings">Рейтинг</a>
+                        <a href="/user.html" data-i18n="nav.user">Пользователь</a>
                     </nav>
                 </div>
                 <div class="right">
+                    <div class="lang-switch" role="group">
+                        <button type="button" class="ghost-btn lang-btn" data-set-lang="ru" data-i18n="lang.ru">Русский</button>
+                        <button type="button" class="ghost-btn lang-btn" data-set-lang="ky" data-i18n="lang.ky">Кыргызча</button>
+                    </div>
                     <span class="chip" id="role-chip">Admin</span>
-                    <button id="load-tickets-btn" class="ghost-btn" type="button">Обновить</button>
-                    <div class="profile-pill" title="Профиль">
+                    <button id="load-tickets-btn" class="ghost-btn" type="button" data-i18n="top.refresh">Обновить</button>
+                    <div class="profile-pill" data-i18n-title="top.profileTitle" title="Профиль">
                         <span class="avatar"></span>
                         <span class="name" id="topbar-profile">admin</span>
                     </div>
-                    <a class="link-btn ghost" href="/profile.html">Профиль</a>
-                    <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+                    <a class="link-btn ghost" href="/profile.html" data-i18n="top.profileLink">Профиль</a>
+                    <button id="logout-btn" class="ghost-btn" type="button" data-i18n="top.logout">Выйти</button>
                 </div>
             </header>
             <section class="stats-grid">
-                <article class="stat-card"><div class="label">Всего тикетов</div><div id="stat-total" class="value">0</div></article>
-                <article class="stat-card"><div class="label">Открытые</div><div id="stat-open" class="value">0</div></article>
-                <article class="stat-card"><div class="label">В работе</div><div id="stat-progress" class="value">0</div></article>
-                <article class="stat-card"><div class="label">Закрытые</div><div id="stat-closed" class="value">0</div></article>
+                <article class="stat-card"><div class="label" data-i18n="stats.totalTickets">Всего тикетов</div><div id="stat-total" class="value">0</div></article>
+                <article class="stat-card"><div class="label" data-i18n="stats.open">Открытые</div><div id="stat-open" class="value">0</div></article>
+                <article class="stat-card"><div class="label" data-i18n="stats.inProgress">В работе</div><div id="stat-progress" class="value">0</div></article>
+                <article class="stat-card"><div class="label" data-i18n="stats.closed">Закрытые</div><div id="stat-closed" class="value">0</div></article>
             </section>
 
             <section class="table-card">
                 <div class="toolbar-inline">
-                    <h3>Недавние тикеты</h3>
-                    <input id="search-input" placeholder="Поиск по заголовку..." />
+                    <h3 data-i18n="table.recentTickets">Недавние тикеты</h3>
+                    <input id="search-input" data-i18n-placeholder="table.searchTitle" placeholder="Поиск по заголовку..." />
                 </div>
                 <div class="table-head">
-                    <div>Тикет</div>
-                    <div>Статус</div>
-                    <div>Приоритет</div>
-                    <div>Действие</div>
+                    <div data-i18n="table.colTicket">Тикет</div>
+                    <div data-i18n="table.colStatus">Статус</div>
+                    <div data-i18n="table.colPriority">Приоритет</div>
+                    <div data-i18n="table.colAction">Действие</div>
                 </div>
                 <div id="tickets-list"></div>
             </section>
 
             <section class="card">
-                <h2>Управление ролями</h2>
+                <h2 data-i18n="roles.title">Управление ролями</h2>
                 <form id="add-role-form">
-                    <input name="email" type="email" placeholder="Email пользователя" required />
+                    <input name="email" type="email" data-i18n-placeholder="roles.emailPh" placeholder="Email пользователя" required />
                     <select name="roleName" required>
                         <option value="SupportAgent">SupportAgent</option>
                         <option value="Customer">Customer</option>
                         <option value="Admin">Admin</option>
                     </select>
-                    <button type="submit">Добавить роль</button>
+                    <button type="submit" data-i18n="roles.add">Добавить роль</button>
                 </form>
 
                 <form id="remove-role-form">
-                    <input name="email" type="email" placeholder="Email пользователя" required />
+                    <input name="email" type="email" data-i18n-placeholder="roles.emailPh" placeholder="Email пользователя" required />
                     <select name="roleName" required>
                         <option value="SupportAgent">SupportAgent</option>
                         <option value="Customer">Customer</option>
                         <option value="Admin">Admin</option>
                     </select>
-                    <button type="submit">Удалить роль</button>
+                    <button type="submit" data-i18n="roles.remove">Удалить роль</button>
                 </form>
                 <p id="roles-output" class="muted"></p>
             </section>
 
             <section class="table-card" style="margin-top:16px;">
                 <div class="toolbar-inline">
-                    <h3>Рейтинг службы поддержки</h3>
-                    <button id="load-ratings-btn" class="ghost-btn" type="button">Обновить рейтинг</button>
+                    <h3 data-i18n="ratings.sectionTitle">Рейтинг службы поддержки</h3>
+                    <button id="load-ratings-btn" class="ghost-btn" type="button" data-i18n="ratings.refresh">Обновить рейтинг</button>
                 </div>
                 <div class="table-head" style="grid-template-columns: 1fr 110px 110px 170px 170px;">
-                    <div>Сотрудник</div>
-                    <div>Назначено</div>
-                    <div>Закрыто</div>
-                    <div>Первый ответ</div>
-                    <div>Решение</div>
+                    <div data-i18n="table.colEmployee">Сотрудник</div>
+                    <div data-i18n="table.colAssigned">Назначено</div>
+                    <div data-i18n="table.colClosed">Закрыто</div>
+                    <div data-i18n="table.colFirstResponse">Первый ответ</div>
+                    <div data-i18n="table.colResolution">Решение</div>
                 </div>
                 <div id="ratings-list"></div>
             </section>
@@ -102,7 +106,11 @@
     </div>
 
     <script type="module">
-        import { api, clearToken, requireAuth, formatDate, priorityText, statusText } from "./common.js?v=3";
+        import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
+        import { api, clearToken, requireAuth, formatDate, priorityText, statusText } from "./common.js?v=4";
+
+        applyDomI18n();
+        bindLangSwitch();
 
         const me = await requireAuth(["Admin"]);
         if (!me) {
@@ -124,10 +132,11 @@
 
         function renderTickets(items) {
             if (!items || items.length === 0) {
-                ticketsList.innerHTML = "<div class='table-row'><div class='muted'>Тикеты не найдены.</div></div>";
+                ticketsList.innerHTML = `<div class='table-row'><div class='muted'>${t("table.noTickets")}</div></div>`;
                 return;
             }
 
+            const openLabel = t("table.open");
             ticketsList.innerHTML = items.map((ticket) => `
                 <div class="table-row">
                     <div>
@@ -136,16 +145,16 @@
                     </div>
                     <div><span class="badge status">${statusText(ticket.status)}</span></div>
                     <div><span class="badge priority">${priorityText(ticket.priority)}</span></div>
-                    <div><a class="link-btn" href="/ticket.html?id=${ticket.id}">Открыть</a></div>
+                    <div><a class="link-btn" href="/ticket.html?id=${ticket.id}">${openLabel}</a></div>
                 </div>
             `).join("");
         }
 
         function renderStats(items) {
             document.getElementById("stat-total").textContent = String(items.length);
-            document.getElementById("stat-open").textContent = String(items.filter((t) => t.status === 0).length);
-            document.getElementById("stat-progress").textContent = String(items.filter((t) => t.status === 1).length);
-            document.getElementById("stat-closed").textContent = String(items.filter((t) => t.status === 2).length);
+            document.getElementById("stat-open").textContent = String(items.filter((x) => x.status === 0).length);
+            document.getElementById("stat-progress").textContent = String(items.filter((x) => x.status === 1).length);
+            document.getElementById("stat-closed").textContent = String(items.filter((x) => x.status === 2).length);
         }
 
         function applyFilter() {
@@ -173,20 +182,24 @@
 
         function fmtMinutes(value) {
             if (value === null || value === undefined) return "—";
-            if (value < 60) return `${Math.round(value)} мин`;
-            const h = value / 60;
-            return `${h.toFixed(h < 10 ? 1 : 0)} ч`;
+            const m = t("time.minShort");
+            const h = t("time.hourShort");
+            if (value < 60) return `${Math.round(value)} ${m}`;
+            const hours = value / 60;
+            return `${hours.toFixed(hours < 10 ? 1 : 0)} ${h}`;
         }
 
         function fmtHours(value) {
             if (value === null || value === undefined) return "—";
-            if (value < 1) return `${Math.round(value * 60)} мин`;
-            return `${value.toFixed(value < 10 ? 1 : 0)} ч`;
+            const m = t("time.minShort");
+            const h = t("time.hourShort");
+            if (value < 1) return `${Math.round(value * 60)} ${m}`;
+            return `${value.toFixed(value < 10 ? 1 : 0)} ${h}`;
         }
 
         function renderRatings(items) {
             if (!items || items.length === 0) {
-                ratingsList.innerHTML = "<div class='table-row'><div class='muted'>Нет данных.</div></div>";
+                ratingsList.innerHTML = `<div class='table-row'><div class='muted'>${t("table.noData")}</div></div>`;
                 return;
             }
             ratingsList.innerHTML = items.map((r) => `
@@ -226,7 +239,7 @@
             try {
                 const params = new URLSearchParams({ email: f.email.value, roleName: f.roleName.value });
                 await api(`/api/Roles/AddUserToRole?${params.toString()}`, { method: "POST" });
-                rolesOutput.textContent = "Роль добавлена.";
+                rolesOutput.textContent = t("roles.added");
             } catch (err) {
                 rolesOutput.textContent = err.message;
             }
@@ -238,7 +251,7 @@
             try {
                 const params = new URLSearchParams({ email: f.email.value, roleName: f.roleName.value });
                 await api(`/api/Roles/RemoveUserFromRole?${params.toString()}`, { method: "POST" });
-                rolesOutput.textContent = "Роль удалена.";
+                rolesOutput.textContent = t("roles.removed");
             } catch (err) {
                 rolesOutput.textContent = err.message;
             }

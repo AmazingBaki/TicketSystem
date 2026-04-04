@@ -41,6 +41,11 @@ li{ margin:6px 0; }
 
 .container{ max-width:1100px; margin:28px auto; padding:0 18px 28px; }
 .container.narrow{ max-width:640px; }
+.page-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+.page-head h1{ margin-bottom:0; }
+.lang-switch{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; flex-shrink:0; }
+.lang-switch .lang-btn{ padding:6px 10px; font-size:12px; opacity:.9; }
+.lang-switch .lang-btn:hover{ opacity:1; }
 .hint,.muted{ color:var(--muted); }
 h1,h2,h3,p{ margin-top:0; }
 h1{ font-size:28px; letter-spacing:-.02em; }

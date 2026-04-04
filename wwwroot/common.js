@@ -1,3 +1,5 @@
+import { t, localeTag, statusLabel, priorityLabel } from "./i18n.js?v=4";
+
 const TOKEN_KEY = "token";
 
 export function getToken() {
@@ -40,7 +42,7 @@ export async function api(path, options = {}) {
 
     if (!response.ok) {
         const message = formatApiError(data);
-        throw new Error(message ? `${response.status}: ${message}` : `${response.status}: Ошибка запроса.`);
+        throw new Error(message ? `${response.status}: ${message}` : `${response.status}: ${t("api.requestError")}`);
     }
 
     return data;
@@ -131,23 +133,13 @@ export function formatApiError(data) {
 export function formatDate(value) {
     if (!value) return "-";
     const date = new Date(value);
-    return date.toLocaleString("ru-RU");
+    return date.toLocaleString(localeTag());
 }
 
 export function statusText(status) {
-    const map = {
-        0: "Open",
-        1: "In Progress",
-        2: "Closed"
-    };
-    return map[status] ?? `Status ${status}`;
+    return statusLabel(status);
 }
 
 export function priorityText(priority) {
-    const map = {
-        0: "Low",
-        1: "Medium",
-        2: "High"
-    };
-    return map[priority] ?? `Priority ${priority}`;
+    return priorityLabel(priority);
 }
