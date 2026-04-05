@@ -19,5 +19,6 @@ namespace TicketSupportSystem.DTOs.Responses
         public string? AssignedToEmail { get; set; }
         public List<AttachmentDTO> Attachments { get; set; } = new();
         public List<CommentDTO> Comments { get; set; } = null!;
+        public int? Rating { get; set; }
     }
 }

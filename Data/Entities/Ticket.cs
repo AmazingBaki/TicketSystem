@@ -18,6 +18,6 @@ namespace TicketSupportSystem.Data.Entities
         public User? AssignedTo { get; set; }
         public List<Comment> Comments { get; set; } = new List<Comment>();
         public List<Attachment> Attachments { get; set; } = new List<Attachment>();
-
+        public int? Rating { get; set; }
     }
 }

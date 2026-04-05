@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title data-i18n="meta.supportTitle">Служба поддержки</title>
-    <link rel="stylesheet" href="styles.css?v=4" />
+    <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
     <div class="app-shell">
@@ -33,6 +33,13 @@
                     </div>
                     <span class="chip" id="role-chip">SupportAgent</span>
                     <button id="load-ratings-btn" class="ghost-btn" type="button" data-i18n="top.refresh">Обновить</button>
+                    <div class="notif-bell-wrap">
+                        <button class="icon-btn notif-bell-btn" type="button" id="notif-bell-btn" data-i18n-aria-label="notify.bell" aria-label="Уведомления">🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
+                        <div class="notif-dropdown" id="notif-dropdown" style="display:none">
+                            <div class="notif-dropdown-header"><span data-i18n="notify.newTickets">Новые тикеты</span><button type="button" id="notif-clear-btn" data-i18n="notify.clear">Очистить</button></div>
+                            <div id="notif-list" class="notif-list"></div>
+                        </div>
+                    </div>
                     <div class="profile-pill" data-i18n-title="top.profileTitle" title="Профиль">
                         <span class="avatar"></span>
                         <span class="name" id="topbar-profile">support</span>
@@ -63,6 +70,8 @@
     <script type="module">
         import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
         import { api, clearToken, requireAuth } from "./common.js?v=4";
+        import { initNotifications } from "./notifications.js?v=2";
+        import { initNotifBell } from "./notifbell.js?v=1";
 
         applyDomI18n();
         bindLangSwitch();
@@ -71,6 +80,9 @@
         if (!me) {
             throw new Error("Forbidden");
         }
+
+        void initNotifications();
+        initNotifBell();
 
         document.getElementById("profile-output").textContent = `${me.name} ${me.surname}`;
         document.getElementById("topbar-profile").textContent = `${me.name} ${me.surname}`;

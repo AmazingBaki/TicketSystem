@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet ef:*)",
+      "Bash(dotnet build:*)",
+      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d TicketSupportDB -Q \"ALTER TABLE Tickets ADD Rating INT NULL;\")",
+      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d TicketSupportDB -Q \"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Tickets' AND COLUMN_NAME='Rating';\")",
+      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d TicketSupportDB -Q \"INSERT INTO [__EFMigrationsHistory] \\([MigrationId],[ProductVersion]\\) VALUES \\('20260405000000_AddTicketRating','7.0.5'\\);\")",
+      "Bash(taskkill /PID 18680 /F)",
+      "Bash(taskkill //PID 18680 //F)",
+      "Bash(powershell -Command \"Get-Process -Name TicketSupportSystem -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'done'\")",
+      "Bash(dotnet run:*)",
+      "Bash(powershell -Command \"Get-Process -Name TicketSupportSystem -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'stopped'\")"
+    ]
+  }
+}

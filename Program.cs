@@ -13,11 +13,13 @@ using TicketSupportSystem.Interfaces;
 using TicketSupportSystem.Services;
 using TicketSupportSystem.Validators;
 using FluentValidation;
+using TicketSupportSystem.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -54,6 +56,20 @@ builder.Services.AddAuthentication(opt =>
         ValidAudience = config["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:SigningKey"]))
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAutoMapper(typeof(TicketSupportSystemProfile));
@@ -64,6 +80,7 @@ builder.Services.AddScoped<ITicketsService, TicketsService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICommentsService, CommentsService>();
 builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<ITicketNotificationService, TicketNotificationService>();
 
 var app = builder.Build();
 
@@ -142,5 +159,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>(NotificationHub.HubPath);
 
 app.Run();

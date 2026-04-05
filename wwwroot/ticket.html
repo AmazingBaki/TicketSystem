@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title data-i18n="meta.ticketTitle">Тикет</title>
-    <link rel="stylesheet" href="styles.css?v=4" />
+    <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
     <main class="container">
@@ -21,6 +21,13 @@
                     <button type="button" class="ghost-btn lang-btn" data-set-lang="ky" data-i18n="lang.ky">Кыргызча</button>
                 </div>
                 <span class="chip" id="role-chip">—</span>
+                <div class="notif-bell-wrap">
+                    <button class="icon-btn notif-bell-btn" type="button" id="notif-bell-btn" data-i18n-aria-label="notify.bell" aria-label="Уведомления">🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
+                    <div class="notif-dropdown" id="notif-dropdown" style="display:none">
+                        <div class="notif-dropdown-header"><span data-i18n="notify.newTickets">Новые тикеты</span><button type="button" id="notif-clear-btn" data-i18n="notify.clear">Очистить</button></div>
+                        <div id="notif-list" class="notif-list"></div>
+                    </div>
+                </div>
                 <div class="profile-pill" data-i18n-title="top.profileTitle" title="Профиль">
                     <span class="avatar"></span>
                     <span class="name" id="topbar-profile">—</span>
@@ -35,11 +42,28 @@
             <div id="ticket-header"></div>
         </section>
 
+        <!-- Close ticket + rating (visible to all when not closed) -->
+        <section id="close-ticket-card" class="card" style="display:none;">
+            <div id="close-ticket-panel">
+                <h2 data-i18n="ticket.closeTitle">Закрыть тикет</h2>
+                <p class="muted" data-i18n="ticket.closeHint">Оцените качество поддержки перед закрытием.</p>
+                <div class="star-rating" id="star-rating">
+                    <button type="button" class="star-btn" data-star="1">★</button>
+                    <button type="button" class="star-btn" data-star="2">★</button>
+                    <button type="button" class="star-btn" data-star="3">★</button>
+                    <button type="button" class="star-btn" data-star="4">★</button>
+                    <button type="button" class="star-btn" data-star="5">★</button>
+                </div>
+                <p class="muted" id="star-label" style="margin-top:4px;font-size:12px;" data-i18n="ticket.ratingOptional">Оценка необязательна</p>
+                <button id="close-ticket-btn" type="button" data-i18n="ticket.closeBtn">Закрыть тикет</button>
+                <p id="close-output" class="muted"></p>
+            </div>
+        </section>
+
+        <!-- Admin/Support edit form (no title/description) -->
         <section id="edit-ticket-card" class="card" style="display:none;">
             <h2 data-i18n="ticket.editTitle">Обновить тикет</h2>
             <form id="edit-ticket-form">
-                <input name="title" data-i18n-placeholder="user.titlePh" placeholder="Заголовок" required />
-                <textarea name="description" data-i18n-placeholder="user.descPh" placeholder="Описание" required></textarea>
                 <label>
                     <span data-i18n="user.priorityLabel">Приоритет</span>
                     <select name="priority" required>
@@ -53,10 +77,14 @@
                     <select name="status" required>
                         <option value="0" data-i18n="ticket.status0">Open</option>
                         <option value="1" data-i18n="ticket.status1">In Progress</option>
-                        <option value="2" data-i18n="ticket.status2">Closed</option>
                     </select>
                 </label>
-                <input name="assignedToId" data-i18n-placeholder="ticket.assignedPh" placeholder="AssignedToId (GUID, необязательно)" />
+                <label>
+                    <span data-i18n="ticket.assignedLabel">Ответственный</span>
+                    <select name="assignedToId">
+                        <option value="" data-i18n="ticket.assignedNone">— Не назначен —</option>
+                    </select>
+                </label>
                 <button type="submit" data-i18n="ticket.saveChanges">Сохранить изменения</button>
             </form>
             <p id="edit-output" class="muted"></p>
@@ -81,6 +109,8 @@
     <script type="module">
         import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
         import { api, clearToken, requireAuth, formatDate, priorityText, statusText } from "./common.js?v=4";
+        import { initNotifications } from "./notifications.js?v=2";
+        import { initNotifBell } from "./notifbell.js?v=1";
 
         applyDomI18n();
         bindLangSwitch();
@@ -90,6 +120,9 @@
             throw new Error("Unauthorized");
         }
 
+        void initNotifications();
+        initNotifBell();
+
         const ticketId = new URLSearchParams(window.location.search).get("id");
         if (!ticketId) {
             document.getElementById("ticket-header").innerHTML = `<p class='muted'>${t("ticket.missingId")}</p>`;
@@ -97,9 +130,33 @@
         }
 
         const isAdminOrSupport = me.roles.includes("Admin") || me.roles.includes("SupportAgent");
+        const isAdmin = me.roles.includes("Admin");
+        const isCustomer = me.roles.includes("Customer");
         const backHref = me.roles.includes("Admin") ? "/admin.html" : (me.roles.includes("SupportAgent") ? "/support.html" : "/user.html");
         document.getElementById("back-link-top").setAttribute("href", backHref);
         document.getElementById("edit-ticket-card").style.display = isAdminOrSupport ? "block" : "none";
+
+        let currentTicketAssignedId = "";
+
+        // Load agents dropdown (Admin and Support can see who to assign)
+        if (isAdminOrSupport) {
+            try {
+                const agents = await api("/api/Roles/GetAgents");
+                const select = document.querySelector('[name="assignedToId"]');
+                for (const a of agents) {
+                    const opt = document.createElement("option");
+                    opt.value = a.id;
+                    opt.textContent = `${a.name} — ${a.email}`;
+                    select.appendChild(opt);
+                }
+                // Only Admin can change assignment; Support can only view
+                if (!isAdmin) {
+                    select.disabled = true;
+                }
+            } catch (e) {
+                // silently ignore if endpoint unavailable
+            }
+        }
 
         document.getElementById("topbar-profile").textContent = `${me.name} ${me.surname}`;
         document.getElementById("role-chip").textContent = me.roles.join(", ");
@@ -120,8 +177,31 @@
             const noAtt = t("ticket.noAttachments");
             const authorLabel = t("ticket.author");
             const createdLabel = t("ticket.created");
+            const assignedLabel = t("ticket.assignedTo");
+
+            const isNewTicket = ticket.status === 0 &&
+                ticket.createdAt &&
+                (Date.now() - new Date(ticket.createdAt).getTime()) < 10 * 60 * 1000;
+
+            const newBanner = isNewTicket
+                ? `<div class="new-ticket-banner"><span class="dot"></span>${t("notify.newTicketBanner")}</div>`
+                : "";
+
+            const isClosed = ticket.status === 2;
+
+            // Rating display for closed tickets
+            let ratingHtml = "";
+            if (isClosed) {
+                if (ticket.rating) {
+                    const stars = "★".repeat(ticket.rating) + "☆".repeat(5 - ticket.rating);
+                    ratingHtml = `<p class="meta"><span style="color:var(--warn);font-size:18px;letter-spacing:2px;">${stars}</span> <span style="font-size:12px;">${t("ticket.ratingLabel")}</span></p>`;
+                } else {
+                    ratingHtml = `<p class="meta muted" style="font-size:12px;">${t("ticket.noRating")}</p>`;
+                }
+            }
 
             document.getElementById("ticket-header").innerHTML = `
+                ${newBanner}
                 <h2>${ticket.title}</h2>
                 <p>${ticket.description}</p>
                 <p class="meta">
@@ -130,20 +210,32 @@
                 </p>
                 <p class="meta">${authorLabel} ${ticket.userEmail}</p>
                 <p class="meta">${createdLabel} ${formatDate(ticket.createdAt)}</p>
+                ${ticket.assignedToName
+                    ? `<p class="meta">${assignedLabel} <strong>${ticket.assignedToName}</strong> <span class="muted">(${ticket.assignedToEmail || ""})</span></p>`
+                    : `<p class="meta muted">${t("ticket.notAssigned")}</p>`}
+                ${ratingHtml}
                 <div class="meta">
                     <strong>${attLabel}</strong>
                     ${ticketAttachments ? `<ul>${ticketAttachments}</ul>` : `<span class="muted">${noAtt}</span>`}
                 </div>
             `;
 
+            // Show/hide close panel
+            const closeCard = document.getElementById("close-ticket-card");
+            closeCard.style.display = isClosed ? "none" : "block";
+
+            // Show/hide edit panel for admin/support (only when open)
             if (isAdminOrSupport) {
+                document.getElementById("edit-ticket-card").style.display = isClosed ? "none" : "block";
                 const form = document.getElementById("edit-ticket-form");
-                form.title.value = ticket.title;
-                form.description.value = ticket.description;
                 form.priority.value = String(ticket.priority);
                 form.status.value = String(ticket.status);
                 form.assignedToId.value = ticket.assignedToId || "";
             }
+            currentTicketAssignedId = ticket.assignedToId || "";
+
+            // Hide comment form when closed
+            document.querySelector("#comment-form button[type='submit']").disabled = isClosed;
         }
 
         function escapeHtml(s) {
@@ -275,16 +367,18 @@
                 const form = e.target;
                 const output = document.getElementById("edit-output");
                 try {
+                    // Backend will ignore title/description for non-Customer — send placeholders
                     await api(`/api/Tickets/UpdateTicket/${encodeURIComponent(ticketId)}`, {
                         method: "PUT",
                         body: JSON.stringify({
-                            title: form.title.value,
-                            description: form.description.value,
+                            title: "_",
+                            description: "_",
                             priority: Number(form.priority.value),
                             status: Number(form.status.value),
                             assignedToId: form.assignedToId.value || null
                         })
                     });
+                    currentTicketAssignedId = form.assignedToId.value;
                     output.textContent = t("ticket.updated");
                     await loadTicket();
                 } catch (err) {
@@ -292,6 +386,48 @@
                 }
             });
         }
+
+        // Close ticket + rating logic (for all roles)
+        let selectedRating = 0;
+        const starBtns = document.querySelectorAll(".star-btn");
+        const starLabel = document.getElementById("star-label");
+
+        starBtns.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                selectedRating = Number(btn.dataset.star);
+                const labels = ["", t("ticket.star1"), t("ticket.star2"), t("ticket.star3"), t("ticket.star4"), t("ticket.star5")];
+                starLabel.textContent = labels[selectedRating] || t("ticket.ratingOptional");
+                starBtns.forEach((b) => {
+                    b.classList.toggle("active", Number(b.dataset.star) <= selectedRating);
+                });
+            });
+            btn.addEventListener("mouseenter", () => {
+                const hov = Number(btn.dataset.star);
+                starBtns.forEach((b) => {
+                    b.classList.toggle("hovered", Number(b.dataset.star) <= hov);
+                });
+            });
+            btn.addEventListener("mouseleave", () => {
+                starBtns.forEach((b) => b.classList.remove("hovered"));
+            });
+        });
+
+        document.getElementById("close-ticket-btn").addEventListener("click", async () => {
+            const output = document.getElementById("close-output");
+            try {
+                await api(`/api/Tickets/CloseTicket/${encodeURIComponent(ticketId)}`, {
+                    method: "POST",
+                    body: JSON.stringify({ rating: selectedRating > 0 ? selectedRating : null })
+                });
+                output.textContent = t("ticket.closed");
+                selectedRating = 0;
+                starBtns.forEach((b) => b.classList.remove("active"));
+                await loadTicket();
+                await loadComments();
+            } catch (err) {
+                output.textContent = err.message;
+            }
+        });
 
         try {
             await loadTicket();

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="meta.rolesTitle">Управление ролями</title>
+    <link rel="stylesheet" href="styles.css?v=6" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="logo">TicketPro</div>
+            <div class="profile-mini"><span class="avatar"></span><span id="profile-output">admin</span></div>
+            <nav class="menu">
+                <a href="/admin.html" data-i18n="nav.console">Консоль</a>
+                <a href="/roles.html" class="active" data-i18n="nav.roles">Роли</a>
+                <a href="/support.html" data-i18n="nav.ratings">Рейтинг</a>
+                <a href="/login.html" data-i18n="nav.login">Вход</a>
+            </nav>
+        </aside>
+
+        <main class="main-area">
+            <header class="app-topbar">
+                <div class="left">
+                    <button id="sidebar-toggle" class="icon-btn" type="button" data-i18n-aria-label="top.menu" aria-label="Меню">☰</button>
+                    <nav class="topnav" data-i18n-aria-label="nav.mainNav" aria-label="Навигация">
+                        <a href="/admin.html" data-i18n="nav.console">Консоль</a>
+                        <a href="/roles.html" class="active" data-i18n="nav.roles">Роли</a>
+                        <a href="/support.html" data-i18n="nav.ratings">Рейтинг</a>
+                    </nav>
+                </div>
+                <div class="right">
+                    <div class="lang-switch" role="group">
+                        <button type="button" class="ghost-btn lang-btn" data-set-lang="ru" data-i18n="lang.ru">Русский</button>
+                        <button type="button" class="ghost-btn lang-btn" data-set-lang="ky" data-i18n="lang.ky">Кыргызча</button>
+                    </div>
+                    <span class="chip" id="role-chip">Admin</span>
+                    <div class="notif-bell-wrap">
+                        <button class="icon-btn notif-bell-btn" type="button" id="notif-bell-btn" data-i18n-aria-label="notify.bell" aria-label="Уведомления">🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
+                        <div class="notif-dropdown" id="notif-dropdown" style="display:none">
+                            <div class="notif-dropdown-header"><span data-i18n="notify.newTickets">Новые тикеты</span><button type="button" id="notif-clear-btn" data-i18n="notify.clear">Очистить</button></div>
+                            <div id="notif-list" class="notif-list"></div>
+                        </div>
+                    </div>
+                    <div class="profile-pill" data-i18n-title="top.profileTitle" title="Профиль">
+                        <span class="avatar"></span>
+                        <span class="name" id="topbar-profile">admin</span>
+                    </div>
+                    <a class="link-btn ghost" href="/profile.html" data-i18n="top.profileLink">Профиль</a>
+                    <button id="logout-btn" class="ghost-btn" type="button" data-i18n="top.logout">Выйти</button>
+                </div>
+            </header>
+
+            <section class="card">
+                <h2 data-i18n="roles.title">Управление ролями</h2>
+                <p class="muted" data-i18n="roles.hint">Добавьте или удалите роль пользователя по email.</p>
+
+                <div class="grid2" style="margin-top:14px;">
+                    <div>
+                        <h3 data-i18n="roles.addSection">Добавить роль</h3>
+                        <form id="add-role-form">
+                            <input name="email" type="email" data-i18n-placeholder="roles.emailPh" placeholder="Email пользователя" required />
+                            <select name="roleName" required>
+                                <option value="SupportAgent">SupportAgent</option>
+                                <option value="Customer">Customer</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                            <button type="submit" data-i18n="roles.add">Добавить роль</button>
+                        </form>
+                    </div>
+                    <div>
+                        <h3 data-i18n="roles.removeSection">Удалить роль</h3>
+                        <form id="remove-role-form">
+                            <input name="email" type="email" data-i18n-placeholder="roles.emailPh" placeholder="Email пользователя" required />
+                            <select name="roleName" required>
+                                <option value="SupportAgent">SupportAgent</option>
+                                <option value="Customer">Customer</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                            <button type="submit" data-i18n="roles.remove">Удалить роль</button>
+                        </form>
+                    </div>
+                </div>
+                <p id="roles-output" class="muted" style="margin-top:12px;"></p>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
+        import { api, clearToken, requireAuth } from "./common.js?v=4";
+        import { initNotifications } from "./notifications.js?v=2";
+        import { initNotifBell } from "./notifbell.js?v=1";
+
+        applyDomI18n();
+        bindLangSwitch();
+
+        const me = await requireAuth(["Admin"]);
+        if (!me) {
+            throw new Error("Forbidden");
+        }
+
+        void initNotifications();
+        initNotifBell();
+
+        document.getElementById("profile-output").textContent = `${me.name} ${me.surname}`;
+        document.getElementById("topbar-profile").textContent = `${me.name} ${me.surname}`;
+        document.getElementById("role-chip").textContent = me.roles.join(", ");
+
+        document.getElementById("sidebar-toggle").addEventListener("click", () => {
+            document.querySelector(".app-shell").classList.toggle("sidebar-collapsed");
+        });
+
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            clearToken();
+            window.location.href = "/login.html";
+        });
+
+        const rolesOutput = document.getElementById("roles-output");
+
+        document.getElementById("add-role-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                const params = new URLSearchParams({ email: f.email.value, roleName: f.roleName.value });
+                await api(`/api/Roles/AddUserToRole?${params.toString()}`, { method: "POST" });
+                rolesOutput.textContent = t("roles.added");
+                f.reset();
+            } catch (err) {
+                rolesOutput.textContent = err.message;
+            }
+        });
+
+        document.getElementById("remove-role-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                const params = new URLSearchParams({ email: f.email.value, roleName: f.roleName.value });
+                await api(`/api/Roles/RemoveUserFromRole?${params.toString()}`, { method: "POST" });
+                rolesOutput.textContent = t("roles.removed");
+                f.reset();
+            } catch (err) {
+                rolesOutput.textContent = err.message;
+            }
+        });
+    </script>
+</body>
+</html>

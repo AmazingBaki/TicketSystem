@@ -167,5 +167,30 @@ namespace TicketSupportSystem.Services
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task CloseTicket(Guid id, int? rating)
+        {
+            var ticket = await _context.Tickets.FindAsync(id);
+            if (ticket == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if (ticket.Status == Status.Closed)
+            {
+                throw new ForbiddenException();
+            }
+
+            ticket.Status = Status.Closed;
+            ticket.ClosedAt = DateTimeOffset.Now;
+            ticket.UpdatedAt = DateTimeOffset.Now;
+
+            if (rating.HasValue && rating.Value >= 1 && rating.Value <= 5)
+            {
+                ticket.Rating = rating.Value;
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 }
