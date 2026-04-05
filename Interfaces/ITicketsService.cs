@@ -9,6 +9,7 @@ namespace TicketSupportSystem.Interfaces
     {
         public Task<Guid> CreateTicket(CreateTicketDTO ticketDTO);
         public Task UpdateTicket(Guid id, UpdateTicketDTO ticketDTO);
+        public Task CloseTicket(Guid id, int? rating);
         public Task DeleteTicket(Guid id);
         public Task<FilteredTicketsDTO> GetTickets(TicketsQueryFilters filters);
         public Task<TicketDetailsDTO> GetTicket(Guid id);

@@ -105,5 +105,21 @@ namespace TicketSupportSystem.Controllers
 
             return Ok(roles);
         }
+
+        [HttpGet("GetAgents")]
+        [Authorize(Roles = "Admin,SupportAgent")]
+        public async Task<IActionResult> GetAgents()
+        {
+            var agents = await _userManager.GetUsersInRoleAsync("SupportAgent");
+            var result = agents
+                .OrderBy(a => a.Surname)
+                .Select(a => new
+                {
+                    id = a.Id,
+                    name = $"{a.Name} {a.Surname}".Trim(),
+                    email = a.Email ?? string.Empty
+                });
+            return Ok(result);
+        }
     }
 }

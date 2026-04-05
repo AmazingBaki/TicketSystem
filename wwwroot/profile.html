@@ -3,67 +3,78 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Профиль</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <title data-i18n="meta.profileTitle">Профиль</title>
+    <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
     <main class="container narrow">
         <header class="app-topbar">
             <div class="left">
-                <nav class="topnav" aria-label="Навигация">
-                    <a id="back-link-top" href="/" class="active">Назад</a>
-                    <a href="/" class="">Главная</a>
+                <nav class="topnav" data-i18n-aria-label="nav.mainNav" aria-label="Навигация">
+                    <a id="back-link-top" href="/" class="active" data-i18n="nav.back">Назад</a>
+                    <a href="/" data-i18n="nav.home">Главная</a>
                 </nav>
             </div>
             <div class="right">
+                <div class="lang-switch" role="group">
+                    <button type="button" class="ghost-btn lang-btn" data-set-lang="ru" data-i18n="lang.ru">Русский</button>
+                    <button type="button" class="ghost-btn lang-btn" data-set-lang="ky" data-i18n="lang.ky">Кыргызча</button>
+                </div>
                 <span class="chip" id="role-chip">—</span>
-                <div class="profile-pill" title="Профиль">
+                <div class="profile-pill" data-i18n-title="top.profileTitle" title="Профиль">
                     <span class="avatar"></span>
                     <span class="name" id="topbar-profile">—</span>
                 </div>
-                <button id="logout-btn" class="ghost-btn" type="button">Выйти</button>
+                <button id="logout-btn" class="ghost-btn" type="button" data-i18n="top.logout">Выйти</button>
             </div>
         </header>
 
         <section class="card">
-            <h2>Данные профиля</h2>
+            <h2 data-i18n="profile.dataTitle">Данные профиля</h2>
             <form id="profile-form">
-                <input name="name" placeholder="Имя" required />
-                <input name="surname" placeholder="Фамилия" required />
-                <input name="userName" placeholder="Username" required />
-                <input name="phoneNumber" placeholder="Телефон" required />
-                <button type="submit">Сохранить</button>
+                <input name="name" data-i18n-placeholder="profile.namePh" placeholder="Имя" required />
+                <input name="surname" data-i18n-placeholder="profile.surnamePh" placeholder="Фамилия" required />
+                <input name="userName" data-i18n-placeholder="profile.userNamePh" placeholder="Username" required />
+                <input name="phoneNumber" data-i18n-placeholder="profile.phonePh" placeholder="Телефон" required />
+                <button type="submit" data-i18n="profile.save">Сохранить</button>
             </form>
             <pre id="profile-output" class="output"></pre>
         </section>
 
         <section class="card">
-            <h2>Изменить пароль</h2>
+            <h2 data-i18n="profile.passwordTitle">Изменить пароль</h2>
             <form id="password-form">
-                <input name="currentPassword" type="password" placeholder="Текущий пароль" required />
-                <input name="newPassword" type="password" placeholder="Новый пароль" required />
-                <button type="submit">Сменить пароль</button>
+                <input name="currentPassword" type="password" data-i18n-placeholder="profile.currentPasswordPh" placeholder="Текущий пароль" required />
+                <input name="newPassword" type="password" data-i18n-placeholder="profile.newPasswordPh" placeholder="Новый пароль" required />
+                <button type="submit" data-i18n="profile.changePassword">Сменить пароль</button>
             </form>
             <pre id="password-output" class="output"></pre>
         </section>
 
         <section class="card">
-            <h2>Изменить email</h2>
-            <p class="muted">После смены email потребуется войти заново (JWT-токен привязан к email).</p>
+            <h2 data-i18n="profile.emailTitle">Изменить email</h2>
+            <p class="muted" data-i18n="profile.emailHint">После смены email потребуется войти заново (JWT-токен привязан к email).</p>
             <form id="email-form">
-                <input name="newEmail" type="email" placeholder="Новый email" required />
-                <input name="currentPassword" type="password" placeholder="Текущий пароль" required />
-                <button type="submit">Сменить email</button>
+                <input name="newEmail" type="email" data-i18n-placeholder="profile.newEmailPh" placeholder="Новый email" required />
+                <input name="currentPassword" type="password" data-i18n-placeholder="profile.currentPasswordPh" placeholder="Текущий пароль" required />
+                <button type="submit" data-i18n="profile.changeEmail">Сменить email</button>
             </form>
             <pre id="email-output" class="output"></pre>
         </section>
     </main>
 
     <script type="module">
-        import { api, clearToken, requireAuth, setOutput } from "./common.js?v=3";
+        import { applyDomI18n, bindLangSwitch, t } from "./i18n.js?v=4";
+        import { api, clearToken, requireAuth, setOutput } from "./common.js?v=4";
+        import { initNotifications } from "./notifications.js?v=2";
+
+        applyDomI18n();
+        bindLangSwitch();
 
         const me = await requireAuth();
         if (!me) throw new Error("Unauthorized");
+
+        void initNotifications();
 
         const backHref = me.roles.includes("Admin")
             ? "/admin.html"
@@ -85,7 +96,7 @@
             f.surname.value = p.surname || "";
             f.userName.value = p.userName || "";
             f.phoneNumber.value = p.phoneNumber || "";
-            setOutput("profile-output", "Загружено.");
+            setOutput("profile-output", t("profile.loaded"));
         }
 
         document.getElementById("profile-form").addEventListener("submit", async (e) => {
@@ -101,7 +112,7 @@
                         phoneNumber: f.phoneNumber.value
                     })
                 });
-                setOutput("profile-output", "Сохранено.");
+                setOutput("profile-output", t("profile.saved"));
             } catch (err) {
                 setOutput("profile-output", err.message);
             }
@@ -118,7 +129,7 @@
                         newPassword: f.newPassword.value
                     })
                 });
-                setOutput("password-output", "Пароль изменён.");
+                setOutput("password-output", t("profile.passwordChanged"));
                 f.reset();
             } catch (err) {
                 setOutput("password-output", err.message);
@@ -136,7 +147,7 @@
                         currentPassword: f.currentPassword.value
                     })
                 });
-                setOutput("email-output", "Email изменён. Нужно войти заново.");
+                setOutput("email-output", t("profile.emailChanged"));
                 clearToken();
                 window.location.href = "/login.html";
             } catch (err) {
@@ -148,4 +159,3 @@
     </script>
 </body>
 </html>
-

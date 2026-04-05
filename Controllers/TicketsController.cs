@@ -25,15 +25,17 @@ namespace TicketSupportSystem.Controllers
         private readonly ITicketsService _ticketsService;
         private readonly UserManager<User> _userManager;
         private readonly ICommentsService _commentsService;
+        private readonly ITicketNotificationService _ticketNotificationService;
         private IValidator<CreateCommentDTO> _createCommentValidator;
         private IValidator<CreateTicketDTO> _createTicketValidator;
         private IValidator<UpdateTicketDTO> _updateTicketValidator;
 
-        public TicketsController(ITicketsService ticketsService, UserManager<User> userManager, ICommentsService commentsService, IValidator<CreateTicketDTO> createTicketValidator, IValidator<UpdateTicketDTO> updateTicketValidator, IValidator<CreateCommentDTO> createCommentValidator)
+        public TicketsController(ITicketsService ticketsService, UserManager<User> userManager, ICommentsService commentsService, ITicketNotificationService ticketNotificationService, IValidator<CreateTicketDTO> createTicketValidator, IValidator<UpdateTicketDTO> updateTicketValidator, IValidator<CreateCommentDTO> createCommentValidator)
         {
             _ticketsService = ticketsService;
             _userManager = userManager;
             _commentsService = commentsService;
+            _ticketNotificationService = ticketNotificationService;
             _createTicketValidator = createTicketValidator;
             _createCommentValidator = createCommentValidator;
             _updateTicketValidator = updateTicketValidator;
@@ -111,6 +113,7 @@ namespace TicketSupportSystem.Controllers
                 return BadRequest(validationRes);
 
             var ticketId = await _ticketsService.CreateTicket(ticketDTO);
+            await _ticketNotificationService.NotifyNewTicketAsync(ticketId, ticketDTO.UserId, ticketDTO.Title);
 
             return Ok(ticketId);
         }
@@ -142,6 +145,13 @@ namespace TicketSupportSystem.Controllers
                         return Forbid();
                     }
                 }
+                else
+                {
+                    // Admin/SupportAgent cannot change client's title and description
+                    var existing = await _ticketsService.GetTicket(id);
+                    ticketDTO.Title = existing.Title;
+                    ticketDTO.Description = existing.Description;
+                }
 
                 await _ticketsService.UpdateTicket(id, ticketDTO);
 
@@ -154,6 +164,43 @@ namespace TicketSupportSystem.Controllers
             catch (ForbiddenException)
             {
                 return Forbid();
+            }
+        }
+
+        [HttpPost("CloseTicket/{id}")]
+        public async Task<IActionResult> CloseTicket(Guid id, [FromBody] CloseTicketDTO dto)
+        {
+            try
+            {
+                var currentUserEmail = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+                var user = await _userManager.FindByEmailAsync(currentUserEmail);
+                if (user is null)
+                {
+                    return Unauthorized();
+                }
+
+                var isCustomer = await _userManager.IsInRoleAsync(user, "Customer");
+                if (isCustomer)
+                {
+                    var ticket = await _ticketsService.GetTicket(id);
+                    if (ticket.UserId != user.Id)
+                    {
+                        return Forbid();
+                    }
+                }
+
+                await _ticketsService.CloseTicket(id, dto.Rating);
+                return Ok();
+            }
+            catch (NotFoundException)
+            {
+                return NotFound();
+            }
+            catch (ForbiddenException)
+            {
+                return Conflict(new { message = "Ticket is already closed." });
             }
         }
 
@@ -184,6 +231,7 @@ namespace TicketSupportSystem.Controllers
                 return BadRequest(validationRes);
 
             var commentId = await _commentsService.CreateComment(commentDTO);
+            await _ticketNotificationService.NotifyNewCommentAsync(commentDTO.TicketId, commentDTO.UserId);
 
             return Ok(commentId);
         }
