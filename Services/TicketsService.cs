@@ -39,11 +39,25 @@ namespace TicketSupportSystem.Services
 
         public async Task DeleteTicket(Guid id)
         {
-            var ticket = await _context.Tickets.FindAsync(id);
+            var ticket = await _context.Tickets
+                .Include(t => t.Attachments)
+                .Include(t => t.Comments)
+                    .ThenInclude(c => c.Attachments)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
             if (ticket == null)
-            {
                 throw new NotFoundException();
-            }
+
+            // Вложения тикета (FK NoAction — удаляем вручную)
+            _context.Attachments.RemoveRange(ticket.Attachments);
+
+            // Вложения комментариев (FK Cascade, но явно для надёжности)
+            foreach (var comment in ticket.Comments)
+                _context.Attachments.RemoveRange(comment.Attachments);
+
+            // Комментарии (FK NoAction со стороны тикета — удаляем вручную)
+            _context.Comments.RemoveRange(ticket.Comments);
+
             _context.Tickets.Remove(ticket);
             await _context.SaveChangesAsync();
         }
