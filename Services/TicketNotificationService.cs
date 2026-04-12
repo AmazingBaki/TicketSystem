@@ -73,9 +73,9 @@ public class TicketNotificationService : ITicketNotificationService
 
         if (roles.Contains("Admin") || roles.Contains("SupportAgent"))
         {
-            if (ticket.UserId != commentAuthorUserId)
+            if (ticket.UserId.HasValue && ticket.UserId.Value != commentAuthorUserId)
             {
-                await SendToUserByIdAsync(ticket.UserId, payload);
+                await SendToUserByIdAsync(ticket.UserId.Value, payload);
             }
         }
     }

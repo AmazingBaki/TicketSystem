@@ -51,6 +51,23 @@
                 </div>
             </header>
 
+            <section class="card" style="margin-bottom:16px;">
+                <h2 data-i18n="roles.createAgentTitle">Создать агента поддержки</h2>
+                <p class="muted" data-i18n="roles.createAgentHint">Создайте нового пользователя сразу с ролью SupportAgent.</p>
+                <form id="create-agent-form" style="margin-top:14px;">
+                    <div class="grid2">
+                        <input name="name" data-i18n-placeholder="register.namePh" placeholder="Имя" required />
+                        <input name="surname" data-i18n-placeholder="register.surnamePh" placeholder="Фамилия" required />
+                    </div>
+                    <input name="email" type="email" data-i18n-placeholder="roles.emailPh" placeholder="Email" required style="margin-top:8px;" />
+                    <input name="userName" data-i18n-placeholder="register.userNamePh" placeholder="Username" required style="margin-top:8px;" />
+                    <input name="phoneNumber" data-i18n-placeholder="register.phonePh" placeholder="Телефон" required style="margin-top:8px;" />
+                    <input name="password" type="password" data-i18n-placeholder="register.passwordPh" placeholder="Пароль (мин. 8 символов)" required minlength="8" style="margin-top:8px;" autocomplete="new-password" />
+                    <button type="submit" style="margin-top:8px;" data-i18n="roles.createAgent">Создать агента</button>
+                </form>
+                <p id="create-agent-output" class="muted" style="margin-top:10px;"></p>
+            </section>
+
             <section class="card">
                 <h2 data-i18n="roles.title">Управление ролями</h2>
                 <p class="muted" data-i18n="roles.hint">Добавьте или удалите роль пользователя по email.</p>
@@ -82,6 +99,32 @@
                     </div>
                 </div>
                 <p id="roles-output" class="muted" style="margin-top:12px;"></p>
+            </section>
+
+            <section class="table-card" style="margin-top:16px;">
+                <div class="toolbar-inline">
+                    <h3 data-i18n="roles.agentsList">Агенты поддержки</h3>
+                </div>
+                <div class="table-head" style="grid-template-columns: 1fr 1fr;">
+                    <div data-i18n="table.colEmployee">Сотрудник</div>
+                    <div data-i18n="table.colStatus">Роль</div>
+                </div>
+                <div id="agents-list"></div>
+            </section>
+
+            <section class="table-card" style="margin-top:16px;">
+                <div class="toolbar-inline">
+                    <h3 data-i18n="roles.allUsers">Все пользователи</h3>
+                    <button id="load-users-btn" class="ghost-btn" type="button" data-i18n="top.refresh">Обновить</button>
+                </div>
+                <p id="delete-user-output" class="muted" style="margin:4px 0 8px 0;"></p>
+                <div class="table-head" style="grid-template-columns: 1.5fr 1fr 1fr 90px;">
+                    <div data-i18n="table.colEmployee">Пользователь</div>
+                    <div>Email</div>
+                    <div data-i18n="table.colStatus">Роли</div>
+                    <div data-i18n="table.colAction">Действие</div>
+                </div>
+                <div id="users-list"></div>
             </section>
         </main>
     </div>
@@ -118,6 +161,34 @@
 
         const rolesOutput = document.getElementById("roles-output");
 
+        const createAgentOutput = document.getElementById("create-agent-output");
+
+        document.getElementById("create-agent-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            createAgentOutput.textContent = "";
+            try {
+                const payload = {
+                    name: f.name.value.trim(),
+                    surname: f.surname.value.trim(),
+                    email: f.email.value.trim(),
+                    userName: f.userName.value.trim(),
+                    phoneNumber: f.phoneNumber.value.trim(),
+                    password: f.password.value
+                };
+                // Register the user (gets Customer role by default)
+                await api("/api/Auth/Register", { method: "POST", body: JSON.stringify(payload), skipAuth: true });
+                // Assign SupportAgent role
+                const params = new URLSearchParams({ email: payload.email, roleName: "SupportAgent" });
+                await api(`/api/Roles/AddUserToRole?${params.toString()}`, { method: "POST" });
+                createAgentOutput.textContent = t("roles.agentCreated");
+                f.reset();
+                await loadAgents();
+            } catch (err) {
+                createAgentOutput.textContent = err.message;
+            }
+        });
+
         document.getElementById("add-role-form").addEventListener("submit", async (e) => {
             e.preventDefault();
             const f = e.target;
@@ -126,6 +197,7 @@
                 await api(`/api/Roles/AddUserToRole?${params.toString()}`, { method: "POST" });
                 rolesOutput.textContent = t("roles.added");
                 f.reset();
+                await loadAgents();
             } catch (err) {
                 rolesOutput.textContent = err.message;
             }
@@ -139,10 +211,94 @@
                 await api(`/api/Roles/RemoveUserFromRole?${params.toString()}`, { method: "POST" });
                 rolesOutput.textContent = t("roles.removed");
                 f.reset();
+                await loadAgents();
             } catch (err) {
                 rolesOutput.textContent = err.message;
             }
         });
+
+        // --- Таблица всех пользователей с удалением ---
+        const deleteUserOutput = document.getElementById("delete-user-output");
+        const usersList = document.getElementById("users-list");
+
+        document.getElementById("load-users-btn").addEventListener("click", loadUsers);
+
+        async function deleteUser(email) {
+            deleteUserOutput.textContent = "";
+            if (!confirm(t("roles.deleteUserConfirm"))) return;
+            try {
+                const params = new URLSearchParams({ email });
+                await api(`/api/Roles/DeleteUser?${params.toString()}`, { method: "DELETE" });
+                deleteUserOutput.textContent = t("roles.userDeleted");
+                await loadUsers();
+                await loadAgents();
+            } catch (err) {
+                deleteUserOutput.textContent = err.message;
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const users = await api("/api/Roles/GetAllUsers");
+                if (!users || !users.length) {
+                    usersList.innerHTML = `<div class='table-row'><div class='muted' style='grid-column:1/-1'>${t("roles.noUsers")}</div></div>`;
+                    return;
+                }
+                usersList.innerHTML = users.map((u) => `
+                    <div class="table-row" style="grid-template-columns: 1.5fr 1fr 1fr 90px;">
+                        <div>
+                            <div class="ticket-title">${u.name || "—"}</div>
+                        </div>
+                        <div class="meta" style="align-self:center;">${u.email}</div>
+                        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;align-self:center;">
+                            ${(u.roles || []).map((r) => `<span class="chip">${r}</span>`).join("")}
+                        </div>
+                        <div style="align-self:center;">
+                            <button type="button" class="ghost-btn js-delete-user"
+                                data-email="${u.email}"
+                                style="color:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c);font-size:12px;padding:4px 10px;">
+                                ${t("roles.deleteUserBtn")}
+                            </button>
+                        </div>
+                    </div>
+                `).join("");
+
+                usersList.querySelectorAll(".js-delete-user").forEach((btn) => {
+                    btn.addEventListener("click", () => deleteUser(btn.dataset.email));
+                });
+            } catch (err) {
+                usersList.innerHTML = `<div class="table-row"><div class="muted">${err.message}</div></div>`;
+            }
+        }
+
+        // --- Агенты ---
+        const agentsList = document.getElementById("agents-list");
+
+        async function loadAgents() {
+            try {
+                const agents = await api("/api/Roles/GetAgents");
+                if (!agents || !agents.length) {
+                    agentsList.innerHTML = `<div class='table-row'><div class='muted'>${t("roles.noAgents")}</div></div>`;
+                    return;
+                }
+                agentsList.innerHTML = agents.map((a) => `
+                    <div class="table-row" style="grid-template-columns: 1fr 1fr;">
+                        <div>
+                            <div class="ticket-title">${a.name}</div>
+                            <div class="meta">${a.email}</div>
+                        </div>
+                        <div style="display:flex;align-items:center;">
+                            <span class="chip">SupportAgent</span>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                agentsList.innerHTML = `<div class="table-row"><div class="muted">${err.message}</div></div>`;
+            }
+        }
+
+        await loadAgents();
+        await loadUsers();
     </script>
 </body>
 </html>

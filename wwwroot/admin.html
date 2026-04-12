@@ -131,6 +131,8 @@
             document.querySelector(".app-shell").classList.toggle("sidebar-collapsed");
         });
 
+        let deleteOutput = null;
+
         function renderTickets(items) {
             if (!items || items.length === 0) {
                 ticketsList.innerHTML = `<div class='table-row'><div class='muted'>${t("table.noTickets")}</div></div>`;
@@ -138,6 +140,7 @@
             }
 
             const openLabel = t("table.open");
+            const deleteLabel = t("ticket.deleteTicket");
             ticketsList.innerHTML = items.map((ticket) => `
                 <div class="table-row">
                     <div>
@@ -146,9 +149,28 @@
                     </div>
                     <div><span class="badge status">${statusText(ticket.status)}</span></div>
                     <div><span class="badge priority">${priorityText(ticket.priority)}</span></div>
-                    <div><a class="link-btn" href="/ticket.html?id=${ticket.id}">${openLabel}</a></div>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <a class="link-btn" href="/ticket.html?id=${ticket.id}">${openLabel}</a>
+                        <button type="button" class="ghost-btn js-delete-ticket"
+                            data-id="${ticket.id}"
+                            style="color:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c);font-size:12px;padding:4px 10px;">
+                            ${deleteLabel}
+                        </button>
+                    </div>
                 </div>
             `).join("");
+
+            ticketsList.querySelectorAll(".js-delete-ticket").forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                    if (!confirm(t("ticket.deleteConfirm"))) return;
+                    try {
+                        await api(`/api/Tickets/DeleteTicket/${encodeURIComponent(btn.dataset.id)}`, { method: "DELETE" });
+                        await loadTickets();
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+            });
         }
 
         function renderStats(items) {

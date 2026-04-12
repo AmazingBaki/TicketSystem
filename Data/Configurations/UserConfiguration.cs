@@ -18,8 +18,8 @@ namespace TicketSupportSystem.Data.Configurations
             builder.HasMany(user => user.CreatedTickets)
                  .WithOne(ticket => ticket.User)
                  .HasForeignKey(ticket => ticket.UserId)
-                 .IsRequired()
-                 .OnDelete(DeleteBehavior.Cascade);
+                 .IsRequired(false)
+                 .OnDelete(DeleteBehavior.SetNull);
             builder.HasMany(user => user.AssignedTickets)
                 .WithOne(ticket => ticket.AssignedTo)
                 .HasForeignKey(ticket => ticket.AssignedToId)

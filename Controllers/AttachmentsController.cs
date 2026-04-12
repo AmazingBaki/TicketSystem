@@ -28,7 +28,7 @@ namespace TicketSupportSystem.Controllers
             _userManager = userManager;
         }
 
-        private async Task<(User User, bool IsCustomer)> GetCurrentUser()
+        private async Task<(User User, bool IsAdminOrSupport)> GetCurrentUser()
         {
             var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                 ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
@@ -37,14 +37,15 @@ namespace TicketSupportSystem.Controllers
             {
                 throw new ForbiddenException();
             }
-            var isCustomer = await _userManager.IsInRoleAsync(user, "Customer");
-            return (user, isCustomer);
+            var isAdminOrSupport = await _userManager.IsInRoleAsync(user, "Admin")
+                || await _userManager.IsInRoleAsync(user, "SupportAgent");
+            return (user, isAdminOrSupport);
         }
 
         private async Task<bool> CanAccessTicket(Guid ticketId)
         {
-            var (user, isCustomer) = await GetCurrentUser();
-            if (!isCustomer) return true;
+            var (user, isAdminOrSupport) = await GetCurrentUser();
+            if (isAdminOrSupport) return true;
             return await _context.Tickets.AnyAsync(t => t.Id == ticketId && t.UserId == user.Id);
         }
 

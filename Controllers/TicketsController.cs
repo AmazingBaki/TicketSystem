@@ -58,6 +58,7 @@ namespace TicketSupportSystem.Controllers
             }
 
             var roles = await _userManager.GetRolesAsync(user);
+
             if (roles.Contains("Admin") || roles.Contains("SupportAgent"))
             {
                 var tickets = await _ticketsService.GetTickets(filters);
@@ -90,9 +91,10 @@ namespace TicketSupportSystem.Controllers
                     return Unauthorized();
                 }
 
-                var isCustomer = await _userManager.IsInRoleAsync(user, "Customer");
+                var isAdminOrSupport = await _userManager.IsInRoleAsync(user, "Admin")
+                    || await _userManager.IsInRoleAsync(user, "SupportAgent");
 
-                if (isCustomer && ticket.UserId != user.Id)
+                if (!isAdminOrSupport && ticket.UserId != user.Id)
                 {
                     return Forbid();
                 }
@@ -135,10 +137,12 @@ namespace TicketSupportSystem.Controllers
                     return Unauthorized();
                 }
 
-                var isCustomer = await _userManager.IsInRoleAsync(user, "Customer");
+                var isAdminOrSupport = await _userManager.IsInRoleAsync(user, "Admin")
+                    || await _userManager.IsInRoleAsync(user, "SupportAgent");
 
-                if (isCustomer)
+                if (!isAdminOrSupport)
                 {
+
                     var existing = await _ticketsService.GetTicket(id);
                     if (existing.UserId != user.Id)
                     {
@@ -147,7 +151,7 @@ namespace TicketSupportSystem.Controllers
                 }
                 else
                 {
-                    // Admin/SupportAgent cannot change client's title and description
+
                     var existing = await _ticketsService.GetTicket(id);
                     ticketDTO.Title = existing.Title;
                     ticketDTO.Description = existing.Description;
@@ -181,8 +185,9 @@ namespace TicketSupportSystem.Controllers
                     return Unauthorized();
                 }
 
-                var isCustomer = await _userManager.IsInRoleAsync(user, "Customer");
-                if (isCustomer)
+                var isAdminOrSupport = await _userManager.IsInRoleAsync(user, "Admin")
+                    || await _userManager.IsInRoleAsync(user, "SupportAgent");
+                if (!isAdminOrSupport)
                 {
                     var ticket = await _ticketsService.GetTicket(id);
                     if (ticket.UserId != user.Id)
@@ -249,9 +254,10 @@ namespace TicketSupportSystem.Controllers
                 return Unauthorized();
             }
 
-            var isCustomer = await _userManager.IsInRoleAsync(user, "Customer");
+            var isAdminOrSupport = await _userManager.IsInRoleAsync(user, "Admin")
+                || await _userManager.IsInRoleAsync(user, "SupportAgent");
 
-            if (isCustomer)
+            if (!isAdminOrSupport)
             {
                 try
                 {

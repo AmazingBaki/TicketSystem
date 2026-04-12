@@ -90,6 +90,12 @@
             <p id="edit-output" class="muted"></p>
         </section>
 
+        <!-- Delete ticket (Admin only) -->
+        <section id="delete-ticket-card" class="card" style="display:none;">
+            <button id="delete-ticket-btn" type="button" class="ghost-btn" style="color:var(--danger,#e74c3c);border-color:var(--danger,#e74c3c);" data-i18n="ticket.deleteTicket">Удалить тикет</button>
+            <p id="delete-ticket-output" class="muted"></p>
+        </section>
+
         <section class="card">
             <h2 data-i18n="ticket.comments">Комментарии</h2>
             <div id="comments-list" class="comment-list"></div>
@@ -132,6 +138,23 @@
         const isAdminOrSupport = me.roles.includes("Admin") || me.roles.includes("SupportAgent");
         const isAdmin = me.roles.includes("Admin");
         const isCustomer = me.roles.includes("Customer");
+
+        // Показываем кнопку удаления тикета только для Admin
+        if (isAdmin) {
+            document.getElementById("delete-ticket-card").style.display = "block";
+        }
+
+        document.getElementById("delete-ticket-btn").addEventListener("click", async () => {
+            const output = document.getElementById("delete-ticket-output");
+            if (!confirm(t("ticket.deleteConfirm"))) return;
+            try {
+                await api(`/api/Tickets/DeleteTicket/${encodeURIComponent(ticketId)}`, { method: "DELETE" });
+                output.textContent = t("ticket.deleted");
+                setTimeout(() => { window.location.href = backHref; }, 1200);
+            } catch (err) {
+                output.textContent = err.message;
+            }
+        });
         const backHref = me.roles.includes("Admin") ? "/admin.html" : (me.roles.includes("SupportAgent") ? "/support.html" : "/user.html");
         document.getElementById("back-link-top").setAttribute("href", backHref);
         document.getElementById("edit-ticket-card").style.display = isAdminOrSupport ? "block" : "none";

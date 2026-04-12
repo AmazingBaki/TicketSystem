@@ -10,7 +10,8 @@
       "Bash(taskkill //PID 18680 //F)",
       "Bash(powershell -Command \"Get-Process -Name TicketSupportSystem -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'done'\")",
       "Bash(dotnet run:*)",
-      "Bash(powershell -Command \"Get-Process -Name TicketSupportSystem -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'stopped'\")"
+      "Bash(powershell -Command \"Get-Process -Name TicketSupportSystem -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'stopped'\")",
+      "Bash(grep -r \"DefaultConnection\" appsettings*.json)"
     ]
   }
 }
